@@ -1,63 +1,101 @@
 package main
 
 import (
-	"fmt"
+	"html/template"
 	"log"
-	"os"
+	"net/http"
 
 	"github.com/CurlyQuokka/speed-matcher/pkg/csvreader"
 	"github.com/CurlyQuokka/speed-matcher/pkg/participant"
 )
 
+type MatchingResults struct {
+	EventName    string
+	Participants participant.Participants
+}
+
 func main() {
-	participantsReader := csvreader.CSVReader{}
-	err := participantsReader.LoadData(os.Args[1])
+	fs := http.FileServer(http.Dir("./frontend"))
+	http.Handle("/", fs)
+
+	http.HandleFunc("/result", uploadHandler)
+
+	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
-		log.Fatalf("error reading participants: %s", err.Error())
+		log.Fatal(err)
+	}
+}
+
+const MAX_UPLOAD_SIZE = 1024 * 1024 // 1MB
+
+func uploadHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
 	}
 
-	matchesReader := csvreader.CSVReader{}
-	err = matchesReader.LoadData(os.Args[2])
+	r.Body = http.MaxBytesReader(w, r.Body, MAX_UPLOAD_SIZE)
+	if err := r.ParseMultipartForm(MAX_UPLOAD_SIZE); err != nil {
+		http.Error(w, "The uploaded file is too big. Please choose an file that's less than 1MB in size", http.StatusBadRequest)
+		return
+	}
+
+	participantsFile, _, err := r.FormFile("participants")
 	if err != nil {
-		log.Fatalf("error reading matches: %s", err.Error())
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	fmt.Println("Participants info:")
-	for _, line := range participantsReader.Data {
-		fmt.Println(line)
-	}
-	fmt.Println()
-	fmt.Println("Matches:")
-	for _, line := range matchesReader.Data {
-		fmt.Println(line)
-	}
+	defer participantsFile.Close()
 
-	fmt.Println()
-	participants, err := participant.ConvertCSVData(participantsReader.Data)
+	reader := csvreader.CSVReader{}
+
+	err = reader.LoadDataFromFile(participantsFile, "participants")
 	if err != nil {
-		log.Fatalf("error converting CSV data to participants: %s", err.Error())
-		os.Exit(3)
+		http.Error(w, "Failed to load participants data", http.StatusInternalServerError)
 	}
 
-	for _, p := range participants {
-		fmt.Println(*p)
-	}
-
-	err = participants.LoadMatches(matchesReader.Data)
+	participants, err := participant.ConvertCSVData(reader.Data)
 	if err != nil {
-		fmt.Println(err.Error())
+		http.Error(w, "Failed to load process participants data", http.StatusInternalServerError)
 	}
-	fmt.Println()
 
-	fmt.Println()
-	for _, p := range participants {
-		fmt.Println(*p)
+	matchesFile, _, err := r.FormFile("matches")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	defer participantsFile.Close()
+
+	err = reader.LoadDataFromFile(matchesFile, "matches")
+	if err != nil {
+		http.Error(w, "Failed to load matching data", http.StatusInternalServerError)
+	}
+
+	err = participants.LoadMatches(reader.Data)
+	if err != nil {
+		http.Error(w, "Failed to load process matching data", http.StatusInternalServerError)
 	}
 
 	participants.ProcessMatches()
 
-	fmt.Println()
-	for _, p := range participants {
-		fmt.Println(*p)
+	matchingResults := MatchingResults{
+		EventName:    r.FormValue("eventName"),
+		Participants: participants,
+	}
+
+	tmpl, err := template.New("result.gohtml").Funcs(template.FuncMap{
+		"Deref": func(p *participant.Participant) participant.Participant {
+			return *p
+		},
+	}).ParseFiles("templates/result.gohtml")
+	if err != nil {
+		http.Error(w, "Failed to prepare matching template", http.StatusInternalServerError)
+	}
+
+	err = tmpl.Execute(w, matchingResults)
+	if err != nil {
+		http.Error(w, "Failed to execute result template", http.StatusInternalServerError)
 	}
 }

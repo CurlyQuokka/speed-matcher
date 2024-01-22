@@ -90,7 +90,7 @@ func (p *Participant) CheckIfMatched(id uint16) bool {
 
 func (p *Participants) ProcessMatches() {
 	for _, participant := range *p {
-		for i := range participant.Matches {
+		for i := 0; i < len(participant.Matches); i++ {
 			if !(*p)[participant.Matches[i]].CheckIfMatched(participant.ID) {
 				participant.Matches = remove(participant.Matches, i)
 				i--

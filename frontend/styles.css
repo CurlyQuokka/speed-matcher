@@ -1,0 +1,32 @@
+body {
+    padding-top: 2rem;
+}
+
+.row {
+    display: flex;
+}
+  
+.column {
+    flex: 50%;
+    padding: 10px;
+}
+
+.left {
+    text-align: right;
+    /* background-color: red; */
+    /* padding-right: 10px; */
+}
+
+.centered {
+    flex: 100%;
+    text-align: center;
+    padding: 10px;
+}
+
+.right {
+    text-align: left;
+    /* background-color: blue; */
+    /* padding-left: 10px; */
+}
+
+

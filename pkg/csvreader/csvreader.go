@@ -3,6 +3,7 @@ package csvreader
 import (
 	"encoding/csv"
 	"fmt"
+	"mime/multipart"
 	"os"
 )
 
@@ -24,6 +25,18 @@ func (cr *CSVReader) LoadData(path string) error {
 	cr.Data, err = reader.ReadAll()
 	if err != nil {
 		return fmt.Errorf("failed to read file %s: %w", path, err)
+	}
+
+	return nil
+}
+
+func (cr *CSVReader) LoadDataFromFile(file multipart.File, filename string) error {
+	// read csv values using csv.Reader
+	reader := csv.NewReader(file)
+	var err error
+	cr.Data, err = reader.ReadAll()
+	if err != nil {
+		return fmt.Errorf("failed to read file %s: %w", filename, err)
 	}
 
 	return nil
