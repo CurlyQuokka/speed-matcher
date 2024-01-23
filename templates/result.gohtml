@@ -1,0 +1,46 @@
+{{ $eventName := .EventName }}
+{{ $participants := .Participants }}
+
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{$eventName}}</title>
+</head>
+
+<body style="padding:2rem;">
+{{range .Participants}}
+    {{ $participant := Deref .}}
+
+    Tytuł: {{$eventName}} - Twoje pary
+    <br />
+    Do: {{$participant.Email}}
+    <br /><br />
+    Cześć {{$participant.Name}}!<br /><br />
+    Dziękujemy Ci za udział w naszym wydarzeniu - {{$eventName}}! Mamy nadzieję, że zabawa była przednia! :)<br /> <br />
+    {{if $participant.Matches}}
+        Oto osoby które nie mogą doczekać się kontaktu z Tobą!<br /><br />
+        <table>
+        {{range $participant.Matches}}
+        {{ $tmp := index $participants .}}
+        {{$match := Deref $tmp}}
+        <tr>
+            <td>{{$match.Name}}</td><td>{{$match.Surname}}</td><td><a href="mailto:{{$match.Email}}">{{$match.Email}}</a></td><td>({{$match.Pronouns}})</td>
+        </tr>
+        {{end}}
+        </table>
+    {{else}}
+        Niestety tym razem nie udało nam się znaleźć dla Ciebie par. Mamy nadzieję, że jeszcze nas odwiedzisz i następne spotkanie będzie bardziej owocne. :)<br />
+    {{end}}
+    <br />
+    Z ogromną dawką miłości,<br />
+    Lambda Szczecin<br /><br />
+    Wiadomośc wygenerowana automatycznie.<br />
+    Widzisz gdzieś jakiś błąd? Napisz do nas pod adresem <a href="mailto:love@lambda.szczecin.pl">love@lambda.szczecin.pl</a>, a my zrobimy co w naszej mocy by to poprawić!
+    <br /><br />-----------------------------------------------------------------------------------------------------------------<br /><br />
+{{end}}
+</body>
+
+</html>
