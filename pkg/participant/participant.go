@@ -25,6 +25,9 @@ type Participants map[uint16]*Participant
 func ConvertCSVData(pData [][]string) (Participants, error) {
 	p := Participants{}
 	for _, line := range pData {
+		if len(line) != 7 {
+			return nil, fmt.Errorf("error while converting CSV data - malformed file")
+		}
 		if strings.EqualFold(line[0], idTag) {
 			continue
 		}

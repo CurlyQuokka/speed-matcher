@@ -4,39 +4,36 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
+	"strconv"
 
 	"github.com/CurlyQuokka/speed-matcher/pkg/csvreader"
 	"github.com/CurlyQuokka/speed-matcher/pkg/participant"
+	. "github.com/CurlyQuokka/speed-matcher/pkg/result"
 )
 
-type MatchingResults struct {
-	EventName    string
-	Participants participant.Participants
-}
+const (
+	DEF_MAX_UPLOAD_SIZE = 1024 * 1024 // 1MB
+	DEF_PORT            = "8080"
 
-func main() {
-	fs := http.FileServer(http.Dir("./frontend"))
-	http.Handle("/", fs)
+	MAX_UPLOAD_SIZE_ENV = "MATCHER_MAX_UPLOAD_SIZE"
+	PORT_ENV            = "MATCHER_PORT"
+)
 
-	http.HandleFunc("/result", uploadHandler)
-
-	err := http.ListenAndServe(":8080", nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-const MAX_UPLOAD_SIZE = 1024 * 1024 // 1MB
+var (
+	maxUploadSize int64
+	port          = DEF_PORT
+)
 
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, MAX_UPLOAD_SIZE)
-	if err := r.ParseMultipartForm(MAX_UPLOAD_SIZE); err != nil {
-		http.Error(w, "The uploaded file is too big. Please choose an file that's less than 1MB in size", http.StatusBadRequest)
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
+	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
+		http.Error(w, "the uploaded file is too big. Please choose an file that's less than 1MB in size", http.StatusBadRequest)
 		return
 	}
 
@@ -52,17 +49,19 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = reader.LoadDataFromFile(participantsFile, "participants")
 	if err != nil {
-		http.Error(w, "Failed to load participants data", http.StatusInternalServerError)
+		http.Error(w, "failed to load participants data", http.StatusInternalServerError)
+		return
 	}
 
 	participants, err := participant.ConvertCSVData(reader.Data)
 	if err != nil {
-		http.Error(w, "Failed to load process participants data", http.StatusInternalServerError)
+		http.Error(w, "failed to process participants data: "+err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	matchesFile, _, err := r.FormFile("matches")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "filed to load matching data:"+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -70,17 +69,19 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = reader.LoadDataFromFile(matchesFile, "matches")
 	if err != nil {
-		http.Error(w, "Failed to load matching data", http.StatusInternalServerError)
+		http.Error(w, "failed to load matching data: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	err = participants.LoadMatches(reader.Data)
 	if err != nil {
-		http.Error(w, "Failed to load process matching data", http.StatusInternalServerError)
+		http.Error(w, "failed to process matching data: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	participants.ProcessMatches()
 
-	matchingResults := MatchingResults{
+	matchingResults := Result{
 		EventName:    r.FormValue("eventName"),
 		Participants: participants,
 	}
@@ -91,11 +92,39 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		},
 	}).ParseFiles("templates/result.gohtml")
 	if err != nil {
-		http.Error(w, "Failed to prepare matching template", http.StatusInternalServerError)
+		http.Error(w, "failed to prepare matching template: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	err = tmpl.Execute(w, matchingResults)
 	if err != nil {
-		http.Error(w, "Failed to execute result template", http.StatusInternalServerError)
+		http.Error(w, "failed to execute result template: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func main() {
+	var err error
+	maxUploadSizeEnv := os.Getenv(MAX_UPLOAD_SIZE_ENV)
+	if maxUploadSizeEnv != "" {
+		maxUploadSize, err = strconv.ParseInt(maxUploadSizeEnv, 10, 64)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	portEnv := os.Getenv(PORT_ENV)
+	if portEnv != "" {
+		port = portEnv
+	}
+
+	fs := http.FileServer(http.Dir("./frontend"))
+	http.Handle("/", fs)
+
+	http.HandleFunc("/result", uploadHandler)
+
+	err = http.ListenAndServe(":"+port, nil)
+	if err != nil {
+		log.Fatal(err)
 	}
 }
