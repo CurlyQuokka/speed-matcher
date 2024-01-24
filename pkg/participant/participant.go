@@ -7,11 +7,15 @@ import (
 	"strings"
 )
 
-const idTag = "id"
+const (
+	idTag      = "id"
+	columnsNum = 8
+)
 
 type Participant struct {
 	ID       uint16
 	Email    string
+	Consent  string
 	Name     string
 	Surname  string
 	Pronouns string
@@ -24,16 +28,16 @@ type Participants map[uint16]*Participant
 
 func ConvertCSVData(pData [][]string) (Participants, error) {
 	p := Participants{}
-	for _, line := range pData {
-		if len(line) != 7 {
-			return nil, fmt.Errorf("error while converting CSV data - malformed file")
+	for _, data := range pData {
+		if len(data) != columnsNum {
+			return nil, fmt.Errorf("error while converting CSV data - malformed file (number of columns is %d instead of %d)", columnsNum, len(data))
 		}
-		if strings.EqualFold(line[0], idTag) {
+		if strings.EqualFold(data[0], idTag) {
 			continue
 		}
-		intID, err := strconv.Atoi(line[0])
+		intID, err := strconv.Atoi(data[0])
 		if err != nil {
-			return nil, fmt.Errorf("error converting value '%s' to int", line[0])
+			return nil, fmt.Errorf("error converting value '%s' to int", data[0])
 		}
 
 		id := uint16(intID)
@@ -46,12 +50,13 @@ func ConvertCSVData(pData [][]string) (Participants, error) {
 
 		p[id] = &Participant{
 			ID:       uint16(id),
-			Email:    line[1],
-			Name:     line[2],
-			Surname:  line[3],
-			Pronouns: line[4],
-			City:     line[5],
-			Birth:    line[6],
+			Email:    data[1],
+			Consent:  data[2],
+			Name:     data[3],
+			Surname:  data[4],
+			Pronouns: data[5],
+			City:     data[6],
+			Birth:    data[7],
 		}
 	}
 	return p, nil
