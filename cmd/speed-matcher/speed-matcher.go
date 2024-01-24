@@ -105,6 +105,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	var err error
+	maxUploadSize = DEF_MAX_UPLOAD_SIZE
 	maxUploadSizeEnv := os.Getenv(MAX_UPLOAD_SIZE_ENV)
 	if maxUploadSizeEnv != "" {
 		maxUploadSize, err = strconv.ParseInt(maxUploadSizeEnv, 10, 64)
