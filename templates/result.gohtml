@@ -4,43 +4,53 @@
 <!DOCTYPE html>
 <html lang="pl">
 
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{$eventName}}</title>
-</head>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>{{$eventName}}</title>
+        <script src="/scripts/script.js"></script>
+    </head>
 
-<body style="padding:2rem;">
-{{range .Participants}}
-    {{ $participant := Deref .}}
-
-    Tytuł: {{$eventName}} - Twoje pary
-    <br />
-    Do: {{$participant.Email}}
-    <br /><br />
-    Cześć {{$participant.Name}}!<br /><br />
-    Dziękujemy Ci za udział w naszym wydarzeniu - {{$eventName}}! Mamy nadzieję, że zabawa była przednia! :)<br /> <br />
-    {{if $participant.Matches}}
-        Oto osoby które nie mogą doczekać się kontaktu z Tobą!<br /><br />
-        <table>
-        {{range $participant.Matches}}
-        {{ $tmp := index $participants .}}
-        {{$match := Deref $tmp}}
-        <tr>
-            <td><b>{{$match.Name}} {{$match.Surname}}</b></td><td><a href="mailto:{{$match.Email}}">{{$match.Email}}</a></td><td>({{$match.Pronouns}})</td>
-        </tr>
-        {{end}}
-        </table>
-    {{else}}
-        Niestety tym razem nie udało nam się znaleźć dla Ciebie par. Mamy nadzieję, że jeszcze nas odwiedzisz i następne spotkanie będzie bardziej owocne. :)<br />
+    <body style="padding:2rem;">
+    <span style="display: none" id="fromEmail">{{.FromEmail}}</span>
+    <span style="display: none" id="passwordEmail">{{.PasswordEmail}}</span>
+    <span style="display: none" id="otp">{{.OTP}}</span>
+    {{range .Participants}}
+        {{ $participant := Deref .}}
+            <div id="{{$participant.Email}}" class="result">
+                Tytuł: <span class="subject">{{$eventName}} - Twoje pary</span>
+                <br />
+                Do: <span class="to">{{$participant.Email}}</span>
+                <br /><br />
+                
+                <div class="content">
+                    Cześć {{$participant.Name}}!<br /><br />
+                    Dziękujemy Ci za udział w naszym wydarzeniu - {{$eventName}}! Mamy nadzieję, że zabawa była przednia! :)<br /> <br />
+                    {{if $participant.Matches}}
+                        Oto osoby które nie mogą doczekać się kontaktu z Tobą!<br /><br />
+                        <table>
+                        {{range $participant.Matches}}
+                        {{ $tmp := index $participants .}}
+                        {{$match := Deref $tmp}}
+                        <tr>
+                            <td><b>{{$match.Name}} {{$match.Surname}}</b></td><td><a href="mailto:{{$match.Email}}">{{$match.Email}}</a></td><td>({{$match.Pronouns}})</td>
+                        </tr>
+                        {{end}}
+                        </table>
+                    {{else}}
+                        Niestety tym razem nie udało nam się znaleźć dla Ciebie par. Mamy nadzieję, że jeszcze nas odwiedzisz i następne spotkanie będzie bardziej owocne. :)<br />
+                    {{end}}
+                    <br />
+                    Z ogromną dawką miłości,<br />
+                    Lambda Szczecin<br /><br />
+                    Wiadomośc wygenerowana automatycznie.<br />
+                    Widzisz gdzieś jakiś błąd? Napisz do nas pod adresem <a href="mailto:love@lambda.szczecin.pl">love@lambda.szczecin.pl</a>, a my zrobimy co w naszej mocy by to poprawić!
+                </div>
+            </div><br />
+            <button id="{{$participant.Email}}-button" onclick="sendMail({{$participant.Email}})">Wyślij</button><span id="{{$participant.Email}}-status"></span>
+            <br />
+            -----------------------------------------------------------------------------------------------------------------<br /><br />
     {{end}}
-    <br />
-    Z ogromną dawką miłości,<br />
-    Lambda Szczecin<br /><br />
-    Wiadomośc wygenerowana automatycznie.<br />
-    Widzisz gdzieś jakiś błąd? Napisz do nas pod adresem <a href="mailto:love@lambda.szczecin.pl">love@lambda.szczecin.pl</a>, a my zrobimy co w naszej mocy by to poprawić!
-    <br /><br />-----------------------------------------------------------------------------------------------------------------<br /><br />
-{{end}}
-</body>
-
+    <button id="sendAll-button" onclick="sendAll()">Wyślij wszystkie</button><br /><br /><span style="color: red" id="general-status"></span>
+    </body>
 </html>
