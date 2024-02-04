@@ -1,6 +1,7 @@
 MAIN_PATH=cmd/speed-matcher/speed-matcher.go
 IMAGE_NAME=speed-matcher
 IMAGE_TAG=latest
+MATCHER_SECRET=defaultSecret16B
 
 build:
 	go build -o bin/speed-matcher $(MAIN_PATH)
