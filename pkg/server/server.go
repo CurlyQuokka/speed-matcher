@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"net/http"
 	"net/smtp"
@@ -74,7 +73,6 @@ func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		validEmail := false
 		for _, domain := range s.allowedDomains {
 			domainRegex := "^[\\w-\\.]+@" + strings.ReplaceAll(domain, ".", "\\.")
-			fmt.Println(domainRegex)
 			r, err := regexp.Compile(domainRegex)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
