@@ -3,11 +3,13 @@ package main
 import (
 	"crypto/cipher"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"net/smtp"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -25,6 +27,7 @@ const (
 	PORT_ENV            = "MATCHER_PORT"
 	SECRET_ENV          = "MATCHER_SECRET"
 	SECRET_LENGTH_ENV   = "MATCHER_SECRET_LENGTH"
+	DOMAINS_ENV         = "MATCHER_DOMAINS"
 )
 
 var (
@@ -35,6 +38,7 @@ var (
 	sec           *security.Security
 
 	defaultSecretLength = 16
+	domains             []string
 )
 
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
@@ -52,6 +56,28 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fromEmail := r.FormValue("fromEmail")
+
+	if len(domains) > 0 {
+		validEmail := false
+		for _, domain := range domains {
+			domainRegex := "^[\\w-\\.]+@" + strings.ReplaceAll(domain, ".", "\\.")
+			fmt.Println(domainRegex)
+			r, err := regexp.Compile(domainRegex)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if r.MatchString(fromEmail) {
+				validEmail = true
+				break
+			}
+		}
+		if !validEmail {
+			http.Error(w, "email "+fromEmail+" is not allowed", http.StatusBadRequest)
+			return
+		}
+	}
+
 	passwordEmail := strings.ReplaceAll(r.FormValue("passwordEmail"), " ", "")
 
 	pass, err := sec.Encrypt(passwordEmail)
@@ -225,6 +251,11 @@ func main() {
 	portEnv := os.Getenv(PORT_ENV)
 	if portEnv != "" {
 		port = portEnv
+	}
+
+	domainString := os.Getenv(DOMAINS_ENV)
+	if domainString != "" {
+		domains = strings.Split(domainString, ",")
 	}
 
 	http.Handle("/", http.FileServer(http.Dir("frontend/")))
