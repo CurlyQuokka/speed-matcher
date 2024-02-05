@@ -5,7 +5,6 @@ import (
 	"html/template"
 	"net/http"
 	"net/smtp"
-	"regexp"
 	"strings"
 
 	"github.com/CurlyQuokka/speed-matcher/pkg/csvreader"
@@ -38,15 +37,18 @@ func New(maxUploadSize int64, allowedDomains []string, sec *security.Security) *
 }
 
 func (s *Server) Serve(port string) error {
+	sm := http.NewServeMux()
+	sm.Handle("/", http.FileServer(http.Dir("frontend/")))
+	sm.Handle("/scripts/", http.StripPrefix("/scripts/", http.FileServer(http.Dir("scripts"))))
+	sm.HandleFunc("/result", s.UploadHandler)
+	sm.HandleFunc("/mail", s.MailHandler)
 
-	http.Handle("/", http.FileServer(http.Dir("frontend/")))
+	srv := http.Server{
+		Addr:    ":" + port,
+		Handler: sm,
+	}
 
-	http.Handle("/scripts/", http.StripPrefix("/scripts/", http.FileServer(http.Dir("scripts"))))
-
-	http.HandleFunc("/result", s.UploadHandler)
-	http.HandleFunc("/mail", s.MailHandler)
-
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
+	if err := srv.ListenAndServe(); err != nil {
 		return err
 	}
 
@@ -70,21 +72,13 @@ func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	fromEmail := r.FormValue("fromEmail")
 
 	if len(s.allowedDomains) > 0 {
-		validEmail := false
-		for _, domain := range s.allowedDomains {
-			domainRegex := "^[\\w-\\.]+@" + strings.ReplaceAll(domain, ".", "\\.")
-			r, err := regexp.Compile(domainRegex)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			if r.MatchString(fromEmail) {
-				validEmail = true
-				break
-			}
+		isAuthorized, err := s.sec.IsEmailAuthorized(fromEmail)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
-		if !validEmail {
-			http.Error(w, "email "+fromEmail+" is not allowed", http.StatusBadRequest)
+		if !isAuthorized {
+			http.Error(w, "address "+fromEmail+" is not authorized to use this service", http.StatusBadRequest)
 			return
 		}
 	}

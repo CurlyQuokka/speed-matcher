@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"regexp"
+	"strings"
 	"time"
 )
 
@@ -18,17 +20,19 @@ const (
 )
 
 type Security struct {
-	secret string
-	cblock cipher.Block
-	otps   map[string]time.Time
-	quit   <-chan bool
+	allowedDomains []string
+	secret         string
+	cblock         cipher.Block
+	otps           map[string]time.Time
+	quit           <-chan bool
 }
 
-func New(secret string, quit <-chan bool) (*Security, error) {
+func New(secret string, allowedDomains []string, quit <-chan bool) (*Security, error) {
 	s := &Security{
-		secret: secret,
-		otps:   make(map[string]time.Time),
-		quit:   quit,
+		allowedDomains: allowedDomains,
+		secret:         secret,
+		otps:           make(map[string]time.Time),
+		quit:           quit,
 	}
 
 	cBlock, err := aes.NewCipher([]byte(s.secret))
@@ -40,16 +44,6 @@ func New(secret string, quit <-chan bool) (*Security, error) {
 	go s.WatchOTPs()
 
 	return s, nil
-}
-
-func (s *Security) NewCipher(secret string) error {
-	s.secret = secret
-	cBlock, err := aes.NewCipher([]byte(s.secret))
-	if err != nil {
-		return err
-	}
-	s.cblock = cBlock
-	return nil
 }
 
 func (s *Security) Encrypt(value string) (string, error) {
@@ -138,4 +132,18 @@ func (s *Security) WatchOTPs() {
 		}
 		time.Sleep(time.Second)
 	}
+}
+
+func (s *Security) IsEmailAuthorized(email string) (bool, error) {
+	for _, domain := range s.allowedDomains {
+		domainRegex := "^[\\w-\\.]+@" + strings.ReplaceAll(domain, ".", "\\.")
+		r, err := regexp.Compile(domainRegex)
+		if err != nil {
+			return false, fmt.Errorf("error compiling regex: %w", err)
+		}
+		if r.MatchString(email) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
