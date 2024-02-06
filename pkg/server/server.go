@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"net/http"
 	"net/smtp"
@@ -15,11 +16,18 @@ import (
 	"github.com/CurlyQuokka/speed-matcher/pkg/security"
 )
 
+const (
+	defaultIdleTimeout       = 3 * time.Minute
+	defaultReadTimeout       = 2 * time.Second
+	defaultWriteTimeout      = 2 * time.Second
+	defaultReadHeaderTimeout = 2 * time.Second
+	defaultShutdownTimeout   = 5 * time.Second
+)
+
 type Server struct {
-	maxUploadSize  int64
-	allowedDomains []string
-	sec            *security.Security
-	srv            *http.Server
+	maxUploadSize int64
+	sec           *security.Security
+	srv           *http.Server
 }
 
 type ToSend struct {
@@ -31,11 +39,10 @@ type ToSend struct {
 	Otp     string `json:"otp"`
 }
 
-func New(maxUploadSize int64, allowedDomains []string, sec *security.Security) *Server {
+func New(maxUploadSize int64, sec *security.Security) *Server {
 	return &Server{
-		maxUploadSize:  maxUploadSize,
-		allowedDomains: allowedDomains,
-		sec:            sec,
+		maxUploadSize: maxUploadSize,
+		sec:           sec,
 	}
 }
 
@@ -47,8 +54,12 @@ func (s *Server) Serve(port string, errors chan<- error) {
 	sm.HandleFunc("/mail", s.MailHandler)
 
 	s.srv = &http.Server{
-		Addr:    ":" + port,
-		Handler: sm,
+		Addr:              ":" + port,
+		Handler:           sm,
+		ReadTimeout:       defaultReadTimeout,
+		WriteTimeout:      defaultWriteTimeout,
+		IdleTimeout:       defaultIdleTimeout,
+		ReadHeaderTimeout: defaultReadHeaderTimeout,
 	}
 
 	err := s.srv.ListenAndServe()
@@ -58,29 +69,16 @@ func (s *Server) Serve(port string, errors chan<- error) {
 func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 
-	if r.Method != "POST" {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	status, err := s.checkUploadHandlerSecurity(w, r)
+	if err != nil {
+		http.Error(w, "security issue: "+err.Error(), status)
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, s.maxUploadSize)
-	if err = r.ParseMultipartForm(s.maxUploadSize); err != nil {
-		http.Error(w, "the uploaded file is too big. Please choose an file that's less than 1MB in size", http.StatusBadRequest)
+	otp, err := s.sec.GenerateOTP()
+	if err != nil {
+		http.Error(w, "failed to generate OTP: "+err.Error(), http.StatusInternalServerError)
 		return
-	}
-
-	fromEmail := r.FormValue("fromEmail")
-
-	if len(s.allowedDomains) > 0 {
-		isAuthorized, err := s.sec.IsEmailAuthorized(fromEmail)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if !isAuthorized {
-			http.Error(w, "address "+fromEmail+" is not authorized to use this service", http.StatusBadRequest)
-			return
-		}
 	}
 
 	passwordEmail := strings.ReplaceAll(r.FormValue("passwordEmail"), " ", "")
@@ -91,39 +89,17 @@ func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	participantsFile, _, err := r.FormFile("participants")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	defer participantsFile.Close()
-
 	reader := csvreader.CSVReader{}
 
-	err = reader.LoadDataFromFile(participantsFile, "participants")
+	participants, status, err := getParticipants(r, &reader)
 	if err != nil {
-		http.Error(w, "failed to load participants data", http.StatusInternalServerError)
+		http.Error(w, "failed to get participants: "+err.Error(), status)
 		return
 	}
 
-	participants, err := participant.ConvertCSVData(reader.Data)
+	status, err = getMatches(r, &reader)
 	if err != nil {
-		http.Error(w, "failed to process participants data: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	matchesFile, _, err := r.FormFile("matches")
-	if err != nil {
-		http.Error(w, "filed to load matching data:"+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	defer participantsFile.Close()
-
-	err = reader.LoadDataFromFile(matchesFile, "matches")
-	if err != nil {
-		http.Error(w, "failed to load matching data: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "failed to get matches: "+err.Error(), status)
 		return
 	}
 
@@ -135,39 +111,82 @@ func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	participants.ProcessMatches()
 
-	otp, err := s.sec.GenerateOTP()
-	if err != nil {
-		http.Error(w, "failed to generate OTP: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+	fromEmail := r.FormValue("fromEmail")
 
-	matchingResults := result.Result{
+	matchingResults := &result.Result{
 		FromEmail:     fromEmail,
 		PasswordEmail: pass,
 		EventName:     r.FormValue("eventName"),
-		Participants:  participants,
+		Participants:  *participants,
 		OTP:           otp,
 	}
 
+	if err = executeTemplate(w, matchingResults); err != nil {
+		http.Error(w, "failed execute rtemplate: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func getParticipants(r *http.Request, reader *csvreader.CSVReader) (*participant.Participants, int, error) {
+	participantsFile, _, err := r.FormFile("participants")
+	if err != nil {
+		return nil, http.StatusInternalServerError,
+			fmt.Errorf("error reading participants form file: %w", err)
+	}
+
+	defer participantsFile.Close()
+
+	err = reader.LoadDataFromFile(participantsFile, "participants")
+	if err != nil {
+		return nil, http.StatusInternalServerError,
+			fmt.Errorf("failed to load participants data")
+	}
+
+	participants, err := participant.ConvertCSVData(reader.Data)
+	if err != nil {
+		return nil, http.StatusBadRequest,
+			fmt.Errorf("failed to process participants data: %w", err)
+	}
+
+	return &participants, http.StatusOK, nil
+}
+
+func getMatches(r *http.Request, reader *csvreader.CSVReader) (int, error) {
+	matchesFile, _, err := r.FormFile("matches")
+	if err != nil {
+		return http.StatusBadRequest, fmt.Errorf("failed to load matching data: %w", err)
+	}
+
+	defer matchesFile.Close()
+
+	err = reader.LoadDataFromFile(matchesFile, "matches")
+	if err != nil {
+		return http.StatusInternalServerError, fmt.Errorf("failed to load matching data: %w", err)
+	}
+
+	return http.StatusOK, nil
+}
+
+func executeTemplate(w http.ResponseWriter, matchingResults *result.Result) error {
 	tmpl, err := template.New("result.gohtml").Funcs(template.FuncMap{
 		"Deref": func(p *participant.Participant) participant.Participant {
 			return *p
 		},
 	}).ParseFiles("templates/result.gohtml")
 	if err != nil {
-		http.Error(w, "failed to prepare matching template: "+err.Error(), http.StatusInternalServerError)
-		return
+		return fmt.Errorf("failed to prepare matching template: %w", err)
 	}
 
 	err = tmpl.Execute(w, matchingResults)
 	if err != nil {
-		http.Error(w, "failed to execute result template: "+err.Error(), http.StatusInternalServerError)
-		return
+		return fmt.Errorf("failed to execute result template: %w", err)
 	}
+
+	return nil
 }
 
 func (s *Server) MailHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
+	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -210,9 +229,39 @@ func (s *Server) MailHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) Shutdown() error {
 	if s.srv != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), defaultShutdownTimeout)
 		defer cancel()
-		return s.srv.Shutdown(ctx)
+		err := s.srv.Shutdown(ctx)
+		if err != nil {
+			return fmt.Errorf("error shutting down HTTP server: %w", err)
+		}
 	}
 	return nil
+}
+
+func (s *Server) checkUploadHandlerSecurity(w http.ResponseWriter, r *http.Request) (int, error) {
+	if r.Method != http.MethodPost {
+		return http.StatusMethodNotAllowed, fmt.Errorf("method not allowed")
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, s.maxUploadSize)
+	if err := r.ParseMultipartForm(s.maxUploadSize); err != nil {
+		return http.StatusBadRequest,
+			fmt.Errorf("the uploaded file is too big (>%d)", s.maxUploadSize)
+	}
+
+	fromEmail := r.FormValue("fromEmail")
+
+	isAuthorized, err := s.sec.IsEmailAuthorized(fromEmail)
+	if err != nil {
+		return http.StatusInternalServerError,
+			fmt.Errorf("error checking email authorization: %w", err)
+	}
+	if !isAuthorized {
+		http.Error(w, "address "+fromEmail+" is not authorized to use this service", http.StatusBadRequest)
+		return http.StatusBadRequest,
+			fmt.Errorf("address %s  is not authorized to use this service", fromEmail)
+	}
+
+	return http.StatusOK, nil
 }

@@ -13,6 +13,8 @@ import (
 	"github.com/CurlyQuokka/speed-matcher/pkg/server"
 )
 
+const sleepTime = time.Second * 2
+
 func main() {
 	cfg, err := config.FromEnv()
 	if err != nil {
@@ -27,10 +29,10 @@ func main() {
 		log.Fatalf("cannot create security module: %s\n", err.Error())
 	}
 
-	s := server.New(cfg.MaxUploadSize, cfg.AllowedDomains, sec)
+	srv := server.New(cfg.MaxUploadSize, sec)
 
 	serverErrors := make(chan error, 1)
-	go s.Serve(cfg.Port, serverErrors)
+	go srv.Serve(cfg.Port, serverErrors)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
@@ -47,14 +49,15 @@ func main() {
 		case <-quit:
 			log.Print("OS interrupt received. Server will shut down in 5s")
 			otpWatchQuit <- true
-			err = s.Shutdown()
-			if err != nil {
+
+			if err = srv.Shutdown(); err != nil {
 				log.Fatalf("error closing server: %s", err.Error())
 			}
+
 			<-otpWatchQuit
 			return
 		default:
-			time.Sleep(time.Second * 2)
+			time.Sleep(sleepTime)
 		}
 	}
 }

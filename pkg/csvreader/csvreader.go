@@ -12,7 +12,6 @@ type CSVReader struct {
 }
 
 func (cr *CSVReader) LoadData(path string) error {
-
 	f, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("failed to open file %s: %w", path, err)

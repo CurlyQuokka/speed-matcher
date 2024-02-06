@@ -49,7 +49,7 @@ func ConvertCSVData(pData [][]string) (Participants, error) {
 		}
 
 		p[id] = &Participant{
-			ID:       uint16(id),
+			ID:       id,
 			Email:    data[1],
 			Consent:  data[2],
 			Name:     data[3],

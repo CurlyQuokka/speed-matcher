@@ -14,9 +14,11 @@ import (
 )
 
 const (
-	otpLength     = 16
+	otpLength     = 16 // must be multiple of 4
 	otpTries      = 10
 	otpExpiration = 180
+	base64denom   = 4
+	base64mul     = 3
 )
 
 type Security struct {
@@ -37,7 +39,7 @@ func New(secret string, allowedDomains []string, quit chan bool) (*Security, err
 
 	cBlock, err := aes.NewCipher([]byte(s.secret))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating new cblock for AES: %w", err)
 	}
 	s.cblock = cBlock
 
@@ -51,7 +53,7 @@ func (s *Security) Encrypt(value string) (string, error) {
 	cipherData := make([]byte, aes.BlockSize+len(byteValue))
 	iv := cipherData[:aes.BlockSize]
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		return "", err
+		return "", fmt.Errorf("error generating IV: %w", err)
 	}
 
 	cfb := cipher.NewCFBEncrypter(s.cblock, iv)
@@ -63,7 +65,7 @@ func (s *Security) Encrypt(value string) (string, error) {
 func (s *Security) Decrypt(value string) (string, error) {
 	cipherData, err := base64.StdEncoding.DecodeString(value)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error decoding base64 value: %w", err)
 	}
 
 	if len(cipherData) < aes.BlockSize {
@@ -80,10 +82,10 @@ func (s *Security) Decrypt(value string) (string, error) {
 }
 
 func GenerateSecret(length int) (string, error) {
-	secret := make([]byte, (length/4)*3) // base64 length calculation formula is 4*[n/3]
+	// base64 length calculation formula is 4*[n/3] without padding
+	secret := make([]byte, (length/base64denom)*base64mul)
 	if _, err := io.ReadFull(rand.Reader, secret); err != nil {
-		return "", err
-
+		return "", fmt.Errorf("error generating secret: %w", err)
 	}
 	return base64.StdEncoding.EncodeToString(secret), nil
 }
@@ -100,14 +102,13 @@ func (s *Security) GenerateOTP() (string, error) {
 			return "", fmt.Errorf("unable to generate OTP: %w", err)
 		}
 		if _, exists := s.otps[key]; exists {
-			if i >= 9 {
+			if i >= otpTries-1 {
 				return "", fmt.Errorf("unable to generate OTP in %d tries", otpTries)
 			}
 			continue
-		} else {
-			s.otps[key] = time.Now()
-			break
 		}
+		s.otps[key] = time.Now()
+		break
 	}
 	return key, nil
 }

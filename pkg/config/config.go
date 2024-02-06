@@ -10,16 +10,16 @@ import (
 )
 
 const (
-	DEF_MAX_UPLOAD_SIZE = 1024 * 1024 // 1MB
-	DEF_PORT            = "8080"
+	defMaxUploadSize = 1024 * 1024 // 1MB
+	defPort          = "8080"
 
-	MAX_UPLOAD_SIZE_ENV = "MATCHER_MAX_UPLOAD_SIZE"
-	PORT_ENV            = "MATCHER_PORT"
-	SECRET_ENV          = "MATCHER_SECRET"
-	SECRET_LENGTH_ENV   = "MATCHER_SECRET_LENGTH"
-	DOMAINS_ENV         = "MATCHER_DOMAINS"
+	maxUploadSizeEnv = "MATCHER_MAX_UPLOAD_SIZE"
+	portEnv          = "MATCHER_PORT"
+	secretEnv        = "MATCHER_SECRET"
+	secretLengthEnv  = "MATCHER_SECRET_LENGTH"
+	domainsEnv       = "MATCHER_DOMAINS"
 
-	DEF_SECRET_LENGTH = 16
+	defSecretLength = 16
 )
 
 type Config struct {
@@ -31,15 +31,15 @@ type Config struct {
 
 func FromEnv() (*Config, error) {
 	cfg := &Config{
-		Port: DEF_PORT,
+		Port: defPort,
 	}
 
 	var err error
 
-	cfg.Secret = os.Getenv(SECRET_ENV)
+	cfg.Secret = os.Getenv(secretEnv)
 	if cfg.Secret == "" {
-		secretLength := DEF_SECRET_LENGTH
-		secretLengthEnv := os.Getenv(SECRET_LENGTH_ENV)
+		secretLength := defSecretLength
+		secretLengthEnv := os.Getenv(secretLengthEnv)
 		if secretLengthEnv != "" {
 			secretLength, err = strconv.Atoi(secretLengthEnv)
 			if err != nil {
@@ -52,8 +52,8 @@ func FromEnv() (*Config, error) {
 		}
 	}
 
-	cfg.MaxUploadSize = DEF_MAX_UPLOAD_SIZE
-	maxUploadSizeEnv := os.Getenv(MAX_UPLOAD_SIZE_ENV)
+	cfg.MaxUploadSize = defMaxUploadSize
+	maxUploadSizeEnv := os.Getenv(maxUploadSizeEnv)
 	if maxUploadSizeEnv != "" {
 		cfg.MaxUploadSize, err = strconv.ParseInt(maxUploadSizeEnv, 10, 64)
 		if err != nil {
@@ -61,12 +61,12 @@ func FromEnv() (*Config, error) {
 		}
 	}
 
-	portEnv := os.Getenv(PORT_ENV)
+	portEnv := os.Getenv(portEnv)
 	if portEnv != "" {
 		cfg.Port = portEnv
 	}
 
-	domainString := os.Getenv(DOMAINS_ENV)
+	domainString := os.Getenv(domainsEnv)
 	if domainString != "" {
 		cfg.AllowedDomains = strings.Split(domainString, ",")
 	}
