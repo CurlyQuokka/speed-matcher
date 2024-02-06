@@ -137,6 +137,9 @@ func (s *Security) WatchOTPs() {
 }
 
 func (s *Security) IsEmailAuthorized(email string) (bool, error) {
+	if len(s.allowedDomains) == 0 {
+		return true, nil
+	}
 	for _, domain := range s.allowedDomains {
 		domainRegex := "^[\\w-\\.]+@" + strings.ReplaceAll(domain, ".", "\\.")
 		r, err := regexp.Compile(domainRegex)

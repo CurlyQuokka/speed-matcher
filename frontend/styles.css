@@ -56,14 +56,26 @@ body {
     width: auto;
   }
   
-  .button-5:hover,
-  .button-5:focus {
+.button-5:hover,
+.button-5:focus {
     background-color: #32a0fb;
     box-shadow: rgba(0, 0, 0, 0.1) 0 4px 12px;
-  }
+}
   
-  .button-5:active {
+.button-5:active {
     background-color: #2085d8;
     box-shadow: rgba(0, 0, 0, .06) 0 2px 4px;
     transform: translateY(0);
-  }
+}
+
+.button-5:disabled {
+    background-color: gray;
+    box-shadow: rgba(0, 0, 0, .06) 0 2px 4px;
+    transform: translateY(0);
+}
+
+.result {
+    border-bottom: 1px dashed;
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+}

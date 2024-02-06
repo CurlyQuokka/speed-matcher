@@ -8,7 +8,8 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>{{$eventName}}</title>
-        <script src="/scripts/script.js"></script>
+        <link rel="stylesheet" href="/styles.css">
+        <script src="/script.js"></script>
     </head>
 
     <body style="padding:2rem;">
@@ -46,11 +47,11 @@
                     Wiadomośc wygenerowana automatycznie.<br />
                     Widzisz gdzieś jakiś błąd? Napisz do nas pod adresem <a href="mailto:love@lambda.szczecin.pl">love@lambda.szczecin.pl</a>, a my zrobimy co w naszej mocy by to poprawić!
                 </div>
-            </div><br />
-            <button id="{{$participant.Email}}-button" onclick="sendMail({{$participant.Email}})">Wyślij</button><span id="{{$participant.Email}}-status"></span>
             <br />
-            -----------------------------------------------------------------------------------------------------------------<br /><br />
+            <button id="{{$participant.Email}}-button" class="button-5" onclick="sendMail({{$participant.Email}})">Wyślij</button><span id="{{$participant.Email}}-status"></span>
+            <br />
+        </div>
     {{end}}
-    <button id="sendAll-button" onclick="sendAll()">Wyślij wszystkie</button><br /><br /><span style="color: red" id="general-status"></span>
+    <button id="sendAll-button" class="button-5" onclick="sendAll()">Wyślij wszystkie</button><br /><br /><span style="color: red" id="general-status"></span>
     </body>
 </html>

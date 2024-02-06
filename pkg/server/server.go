@@ -49,7 +49,7 @@ func New(maxUploadSize int64, sec *security.Security) *Server {
 func (s *Server) Serve(port string, errors chan<- error) {
 	sm := http.NewServeMux()
 	sm.Handle("/", http.FileServer(http.Dir("frontend/")))
-	sm.Handle("/scripts/", http.StripPrefix("/scripts/", http.FileServer(http.Dir("scripts"))))
+	// sm.Handle("/scripts/", http.StripPrefix("/scripts/", http.FileServer(http.Dir("scripts"))))
 	sm.HandleFunc("/result", s.UploadHandler)
 	sm.HandleFunc("/mail", s.MailHandler)
 
