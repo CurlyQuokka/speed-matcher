@@ -24,10 +24,10 @@ type Security struct {
 	secret         string
 	cblock         cipher.Block
 	otps           map[string]time.Time
-	quit           <-chan bool
+	quit           chan bool
 }
 
-func New(secret string, allowedDomains []string, quit <-chan bool) (*Security, error) {
+func New(secret string, allowedDomains []string, quit chan bool) (*Security, error) {
 	s := &Security{
 		allowedDomains: allowedDomains,
 		secret:         secret,
@@ -120,13 +120,14 @@ func (s *Security) CheckOTP(key string) bool {
 func (s *Security) WatchOTPs() {
 	for {
 		for key, t := range s.otps {
-			diff := time.Now().Sub(t)
+			diff := time.Since(t)
 			if diff.Seconds() > otpExpiration {
 				delete(s.otps, key)
 			}
 		}
 		select {
 		case <-s.quit:
+			s.quit <- true
 			return
 		default:
 		}

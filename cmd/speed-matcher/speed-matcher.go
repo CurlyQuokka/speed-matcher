@@ -1,7 +1,12 @@
 package main
 
 import (
+	"errors"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"time"
 
 	"github.com/CurlyQuokka/speed-matcher/pkg/config"
 	"github.com/CurlyQuokka/speed-matcher/pkg/security"
@@ -24,10 +29,32 @@ func main() {
 
 	s := server.New(cfg.MaxUploadSize, cfg.AllowedDomains, sec)
 
-	err = s.Serve(cfg.Port)
-	if err != nil {
-		log.Fatalf("error in HTTP server: %s\n", err.Error())
-	}
+	serverErrors := make(chan error, 1)
+	go s.Serve(cfg.Port, serverErrors)
 
-	otpWatchQuit <- true
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt)
+
+	for {
+		select {
+		case err = <-serverErrors:
+			otpWatchQuit <- true
+			if !errors.Is(err, http.ErrServerClosed) {
+				log.Fatalf("error in HTTP server: %s", err.Error())
+			}
+			<-otpWatchQuit
+			return
+		case <-quit:
+			log.Print("OS interrupt received. Server will shut down in 5s")
+			otpWatchQuit <- true
+			err = s.Shutdown()
+			if err != nil {
+				log.Fatalf("error closing server: %s", err.Error())
+			}
+			<-otpWatchQuit
+			return
+		default:
+			time.Sleep(time.Second * 2)
+		}
+	}
 }

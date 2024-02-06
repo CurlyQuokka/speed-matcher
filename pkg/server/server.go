@@ -1,11 +1,13 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"html/template"
 	"net/http"
 	"net/smtp"
 	"strings"
+	"time"
 
 	"github.com/CurlyQuokka/speed-matcher/pkg/csvreader"
 	"github.com/CurlyQuokka/speed-matcher/pkg/participant"
@@ -17,6 +19,7 @@ type Server struct {
 	maxUploadSize  int64
 	allowedDomains []string
 	sec            *security.Security
+	srv            *http.Server
 }
 
 type ToSend struct {
@@ -36,23 +39,20 @@ func New(maxUploadSize int64, allowedDomains []string, sec *security.Security) *
 	}
 }
 
-func (s *Server) Serve(port string) error {
+func (s *Server) Serve(port string, errors chan<- error) {
 	sm := http.NewServeMux()
 	sm.Handle("/", http.FileServer(http.Dir("frontend/")))
 	sm.Handle("/scripts/", http.StripPrefix("/scripts/", http.FileServer(http.Dir("scripts"))))
 	sm.HandleFunc("/result", s.UploadHandler)
 	sm.HandleFunc("/mail", s.MailHandler)
 
-	srv := http.Server{
+	s.srv = &http.Server{
 		Addr:    ":" + port,
 		Handler: sm,
 	}
 
-	if err := srv.ListenAndServe(); err != nil {
-		return err
-	}
-
-	return nil
+	err := s.srv.ListenAndServe()
+	errors <- err
 }
 
 func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
@@ -206,4 +206,13 @@ func (s *Server) MailHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error while sending to: "+ts.To+" "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+func (s *Server) Shutdown() error {
+	if s.srv != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		return s.srv.Shutdown(ctx)
+	}
+	return nil
 }
