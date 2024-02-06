@@ -47,9 +47,7 @@
                     Wiadomośc wygenerowana automatycznie.<br />
                     Widzisz gdzieś jakiś błąd? Napisz do nas pod adresem <a href="mailto:love@lambda.szczecin.pl">love@lambda.szczecin.pl</a>, a my zrobimy co w naszej mocy by to poprawić!
                 </div>
-            <br />
             <button id="{{$participant.Email}}-button" class="button-5" onclick="sendMail({{$participant.Email}})">Wyślij</button><span id="{{$participant.Email}}-status"></span>
-            <br />
         </div>
     {{end}}
     <button id="sendAll-button" class="button-5" onclick="sendAll()">Wyślij wszystkie</button><br /><br /><span style="color: red" id="general-status"></span>

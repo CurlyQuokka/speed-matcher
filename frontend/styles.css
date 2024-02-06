@@ -74,8 +74,12 @@ body {
     transform: translateY(0);
 }
 
+.content {
+    padding-bottom: 1rem;
+}
+
 .result {
-    border-bottom: 1px dashed;
-    margin-bottom: 2rem;
-    padding-bottom: 2rem;
+    border-bottom: 1px solid;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
 }

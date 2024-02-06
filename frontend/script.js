@@ -11,7 +11,7 @@ function getJson(id) {
     }
 }
 
-function sendMail(id) {
+function sendMail(id, errorCounter) {
     var toSend = getJson(id);
 
     var xhttp = new XMLHttpRequest();
@@ -35,6 +35,9 @@ function sendMail(id) {
             statusTextField.innerText = " - WYSTĄPIŁ BŁĄD - " + this.status + " - " + this.statusText + " - " + this.responseText;
             statusTextField.style.color = "red";
             document.getElementById("general-status").innerText += "WYSTĄPIŁ BŁĄD - " + this.status + " - " + this.statusText + " - " + this.responseText + "\n";
+            if (errorCounter != null) {
+                errorCounter.value++
+            }
         }
     };
 
@@ -44,9 +47,17 @@ function sendMail(id) {
 
 function sendAll() {
     var results = document.getElementsByClassName("result");
+
+    var errorCounter = {
+        value: 0
+    };
+
     for (result of results) {
         id =  result.getElementsByClassName("to")[0].innerText
-        sendMail(id)
+        sendMail(id, errorCounter)
     }
-    document.getElementById("sendAll-button").disabled = true;
+
+    if (errorCounter.value == 0) {
+        document.getElementById("sendAll-button").disabled = true;
+    }
 }
