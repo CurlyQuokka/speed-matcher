@@ -14,3 +14,6 @@ clean:
 
 docker-build:
 	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) .
+
+lint:
+	golangci-lint run
