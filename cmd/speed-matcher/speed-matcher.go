@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -15,10 +16,10 @@ import (
 
 const sleepTime = time.Second * 2
 
-func main() {
+func start() error {
 	cfg, err := config.FromEnv()
 	if err != nil {
-		log.Fatalf("cannot create config from env: %s\n", err.Error())
+		return fmt.Errorf("cannot create config from env: %w", err)
 	}
 
 	otpWatchQuit := make(chan bool)
@@ -26,7 +27,7 @@ func main() {
 
 	sec, err := security.New(cfg.Secret, cfg.AllowedDomains, otpWatchQuit)
 	if err != nil {
-		log.Fatalf("cannot create security module: %s\n", err.Error())
+		return fmt.Errorf("cannot create security module: %w", err)
 	}
 
 	srv := server.New(cfg.MaxUploadSize, sec, cfg.CertFile, cfg.KeyFile)
@@ -42,22 +43,29 @@ func main() {
 		case err = <-serverErrors:
 			otpWatchQuit <- true
 			if !errors.Is(err, http.ErrServerClosed) {
-				log.Fatalf("error in HTTP server: %s", err.Error())
+				return fmt.Errorf("error in HTTP server: %w", err)
 			}
 			<-otpWatchQuit
-			return
+			return err
 		case <-quit:
-			log.Print("OS interrupt received. Server will shut down in " + server.DefaultShutdownTimeout.String())
+			log.Printf("OS interrupt received. Server will shut down in %s", server.DefaultShutdownTimeout.String())
 			otpWatchQuit <- true
+			<-otpWatchQuit
 
 			if err = srv.Shutdown(); err != nil {
-				log.Fatalf("error closing server: %s", err.Error())
+				return fmt.Errorf("error closing server: %w", err)
 			}
 
-			<-otpWatchQuit
-			return
+			return nil
 		default:
 			time.Sleep(sleepTime)
 		}
+	}
+}
+
+func main() {
+	if err := start(); err != nil {
+		log.Printf("error: %s", err.Error())
+		os.Exit(1)
 	}
 }
