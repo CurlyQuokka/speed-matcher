@@ -47,7 +47,7 @@ func main() {
 			<-otpWatchQuit
 			return
 		case <-quit:
-			log.Print("OS interrupt received. Server will shut down in 5s")
+			log.Print("OS interrupt received. Server will shut down in " + server.DefaultShutdownTimeout.String())
 			otpWatchQuit <- true
 
 			if err = srv.Shutdown(); err != nil {

@@ -21,7 +21,7 @@ const (
 	defaultReadTimeout       = 2 * time.Second
 	defaultWriteTimeout      = 2 * time.Second
 	defaultReadHeaderTimeout = 2 * time.Second
-	defaultShutdownTimeout   = 5 * time.Second
+	DefaultShutdownTimeout   = 5 * time.Second
 )
 
 type Server struct {
@@ -237,7 +237,7 @@ func (s *Server) MailHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) Shutdown() error {
 	if s.srv != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), defaultShutdownTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), DefaultShutdownTimeout)
 		defer cancel()
 		err := s.srv.Shutdown(ctx)
 		if err != nil {
