@@ -29,7 +29,7 @@ func main() {
 		log.Fatalf("cannot create security module: %s\n", err.Error())
 	}
 
-	srv := server.New(cfg.MaxUploadSize, sec)
+	srv := server.New(cfg.MaxUploadSize, sec, cfg.CertFile, cfg.KeyFile)
 
 	serverErrors := make(chan error, 1)
 	go srv.Serve(cfg.Port, serverErrors)

@@ -18,6 +18,8 @@ const (
 	secretEnv        = "MATCHER_SECRET"
 	secretLengthEnv  = "MATCHER_SECRET_LENGTH"
 	domainsEnv       = "MATCHER_DOMAINS"
+	certFileEnv      = "MATCHER_CERT"
+	keyFileEnv       = "MATCHER_KEY"
 
 	defSecretLength = 16
 )
@@ -27,6 +29,8 @@ type Config struct {
 	MaxUploadSize  int64
 	Port           string
 	Secret         string
+	CertFile       string
+	KeyFile        string
 }
 
 func FromEnv() (*Config, error) {
@@ -70,6 +74,9 @@ func FromEnv() (*Config, error) {
 	if domainString != "" {
 		cfg.AllowedDomains = strings.Split(domainString, ",")
 	}
+
+	cfg.CertFile = os.Getenv(certFileEnv)
+	cfg.KeyFile = os.Getenv(keyFileEnv)
 
 	return cfg, nil
 }

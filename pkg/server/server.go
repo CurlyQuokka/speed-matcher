@@ -28,6 +28,8 @@ type Server struct {
 	maxUploadSize int64
 	sec           *security.Security
 	srv           *http.Server
+	certFile      string
+	keyFile       string
 }
 
 type ToSend struct {
@@ -39,17 +41,18 @@ type ToSend struct {
 	Otp     string `json:"otp"`
 }
 
-func New(maxUploadSize int64, sec *security.Security) *Server {
+func New(maxUploadSize int64, sec *security.Security, certFile, keyFile string) *Server {
 	return &Server{
 		maxUploadSize: maxUploadSize,
 		sec:           sec,
+		certFile:      certFile,
+		keyFile:       keyFile,
 	}
 }
 
 func (s *Server) Serve(port string, errors chan<- error) {
 	sm := http.NewServeMux()
 	sm.Handle("/", http.FileServer(http.Dir("frontend/")))
-	// sm.Handle("/scripts/", http.StripPrefix("/scripts/", http.FileServer(http.Dir("scripts"))))
 	sm.HandleFunc("/result", s.UploadHandler)
 	sm.HandleFunc("/mail", s.MailHandler)
 
@@ -62,7 +65,12 @@ func (s *Server) Serve(port string, errors chan<- error) {
 		ReadHeaderTimeout: defaultReadHeaderTimeout,
 	}
 
-	err := s.srv.ListenAndServe()
+	var err error
+	if s.certFile != "" {
+		err = s.srv.ListenAndServeTLS("/home/patryk/cert/server.crt", "/home/patryk/cert/server.key")
+	} else {
+		err = s.srv.ListenAndServe()
+	}
 	errors <- err
 }
 
