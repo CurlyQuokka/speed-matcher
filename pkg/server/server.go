@@ -230,7 +230,7 @@ func (s *Server) MailHandler(w http.ResponseWriter, r *http.Request) {
 	auth := smtp.PlainAuth("Stowarzyszenie Lambda Szczecin", ts.From, pass, smtpGmail)
 
 	if err := smtp.SendMail(server, auth, ts.From, []string{ts.To}, []byte(msg)); err != nil {
-		http.Error(w, "Error while sending to: "+ts.To+" "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "error while sending to: "+ts.To+" "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
@@ -266,9 +266,8 @@ func (s *Server) checkUploadHandlerSecurity(w http.ResponseWriter, r *http.Reque
 			fmt.Errorf("error checking email authorization: %w", err)
 	}
 	if !isAuthorized {
-		http.Error(w, "address "+fromEmail+" is not authorized to use this service", http.StatusBadRequest)
 		return http.StatusBadRequest,
-			fmt.Errorf("address %s  is not authorized to use this service", fromEmail)
+			fmt.Errorf("address %s is not authorized to use this service", fromEmail)
 	}
 
 	return http.StatusOK, nil
