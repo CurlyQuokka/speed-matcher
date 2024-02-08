@@ -8,8 +8,10 @@ RUN go mod download
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /speed-matcher cmd/speed-matcher/speed-matcher.go
 
-FROM scratch
+FROM alpine:3.19
 WORKDIR /src
+
+RUN apk add ca-certificates
 
 COPY --from=build-env /speed-matcher /
 COPY --from=build-env /src/frontend /src/frontend/
