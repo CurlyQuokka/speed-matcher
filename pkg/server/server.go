@@ -67,7 +67,7 @@ func (s *Server) Serve(port string, errors chan<- error) {
 
 	var err error
 	if s.certFile != "" {
-		err = s.srv.ListenAndServeTLS("/home/patryk/cert/server.crt", "/home/patryk/cert/server.key")
+		err = s.srv.ListenAndServeTLS(s.certFile, s.keyFile)
 	} else {
 		err = s.srv.ListenAndServe()
 	}
