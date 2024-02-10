@@ -1,5 +1,14 @@
 body {
-    padding-top: 2rem;
+    padding: 1rem;
+    font-family: 'Roboto', sans-serif;
+}
+
+a {
+    text-decoration: none;
+}
+
+#matcherForm {
+    padding: 1rem;
 }
 
 .row {
@@ -82,4 +91,33 @@ body {
     border-bottom: 1px solid;
     margin-bottom: 1rem;
     padding-bottom: 1rem;
+}
+
+.just {
+    background-color: #32a0fb;
+    max-width: 800px;
+}
+
+h1 {
+    /* max-width: 800px; */
+    text-align: center;
+}
+
+.readme {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+li {
+    text-align: justify;
+}
+
+ol {
+    margin: 10px;
+}
+
+.outer {
+    padding-bottom: 10px;
 }

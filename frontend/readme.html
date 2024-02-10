@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Speed-event matcher</title>
+    <link rel="stylesheet" href="/styles.css">
+    <!---https://www.svgrepo.com/svg/406604/men-holding-hands-medium-light-skin-tone-medium-dark-skin-tone-->
+    <link rel="icon" type="image/x-icon" href="favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet"> 
+</head>
+
+<body>
+    <div class="readme">
+        <div class="just">
+        <h1 style="background-color: blueviolet;">Instrukcja obsługi</h1>
+        <ol>
+            <li class="outer">
+                Tworzymy dokument z listą uczestników w dowolny arkuszu kalkulacyjnym (np. Google Sheets, Excel, LibreOffice/OpenOffice Calc) z następującymi kolumnami, <b><u>koniecznie w tej kolejności</u></b>:
+                <ol>
+                    <li>
+                        Numer uczestnika w zabawie
+                    </li>
+                    <li>
+                        Adres e-mail
+                    </li>
+                    <li>
+                        Wyrażenie zgody na uczestnictwo
+                    </li>
+                    <li>
+                        Preferowane imię
+                    </li>
+                    <li>
+                        Nazwisko
+                    </li>
+                    <li>
+                        Używane zaimki
+                    </li>
+                    <li>
+                        Miejsce zamieszkania
+                    </li>
+                    <li>
+                        Data urodzenia
+                    </li>
+                </ol>
+                <i>Numery uczestników nie muszą być w kolejności "alfabetycznej".</i>
+            </li>
+            <li class="outer">Zapisujemy plik w formacie CSV (Comma-separated values). Np. w Google należy wybrać z menu Plik > Pobierz > Wartości oddzielone przecinkami (.csv)</li>
+            <li class="outer">
+                Tworzymy drugi plik w którym przepisujemy odpowiedzi uczestników z karteczek. W pierwszej <b>kolumnie</b> wpisujemy numer uczestnika w <b>następnych kolumnach <u>tylko</u> numery osób z którymi ta osoba <u>chce</u> nawiązać kontakt</b>
+                <br /><br />Przykładowo:<br /><br />
+                <ul>
+                    <li>
+                        Osoba z numerem <b>1</b> chce nawiązać kontakt z osobami <b>2</b> i <b>3</b>
+                    </li>
+                    <li>
+                        Osoba z numerem <b>2</b> chce nawiązać kontakt z osobami <b>1</b> i <b>4</b>
+                    </li>
+                    <li>
+                        Osoba z numerem <b>3</b> chce nawiązać kontakt z osobami <b>1</b>, <b>2</b> i <b>4</b>
+                    </li>
+                    <li>
+                        Osoba z numerem <b>4</b> nie chce nawiązywac <b>żadnego</b> kontaktu. :(
+                    </li>
+                </ul>
+                <br /><br />Plik powinien wyglądać więc nastepująco:<br /><br />
+                <br /><br /><i>W tym pliku nie powinno być nic poza numerami.</i><br /><br />
+            </li>
+            <li class="outer">
+                Drugi plik również zapisujemy jako CSV tak samo jak pierwszy.
+            </li>
+            <li class="outer">
+                Otwieramy <a href="/" target="_blank" rel="noopener noreferrer">narzędzie do matchowania</a> i wpisujemy potrzebne informacje
+                <ul>
+                    <li>Nazwa eventu (np. SpeedFriending - 19.02.2024)</li>
+                    <li></li>
+                </ul>
+            </li>
+        </ol> 
+    </div>
+    </div>
+    
+</body>
+
+</html>
