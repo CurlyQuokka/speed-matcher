@@ -1,92 +1,65 @@
 <!DOCTYPE html>
 <html lang="pl">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Speed-event matcher</title>
+        <link rel="stylesheet" href="static/styles.css">
+        <!---https://www.svgrepo.com/svg/406604/men-holding-hands-medium-light-skin-tone-medium-dark-skin-tone-->
+        <link rel="icon" type="image/x-icon" href="favicon.svg">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet"> 
+    </head>
 
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Speed-event matcher</title>
-    <link rel="stylesheet" href="/styles.css">
-    <!---https://www.svgrepo.com/svg/406604/men-holding-hands-medium-light-skin-tone-medium-dark-skin-tone-->
-    <link rel="icon" type="image/x-icon" href="favicon.svg">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet"> 
-</head>
-
-<body>
-    <form id="matcherForm" enctype="multipart/form-data" action="/result" method="POST" >
-        <div class="row">
-            <div class="column left">
-                <div>
-                    <label for="eventName">Nazwa wydarzenia:</label>
+    <body>
+        <form id="matcherForm" enctype="multipart/form-data" action="/result" method="POST" >
+            <div class="row">
+                <div class="column left">
+                    <div>
+                        <label for="eventName">Nazwa wydarzenia:</label>
+                    </div>
+                </div>
+                <div class="column right">
+                    <div>
+                        <input type="text" id="eventName" name="eventName"/>
+                    </div>
                 </div>
             </div>
-            <div class="column right">
-                <div>
-                    <input type="text" id="eventName" name="eventName"/>
+            <div class="row">
+                <div class="column left">
+                    <div>
+                        <label for="participants">Uczestnicy:</label>
+                    </div>
+                </div>
+                <div class="column right">
+                    <div>
+                        <input type="file" id="participants" name="participants" accept=".csv" />
+                    </div>
+                </div>
+            </div> 
+            <div class="row">
+                <div class="column left">
+                    <div>
+                        <label for="matches">Odpowiedzi:</label>
+                    </div>
+                </div>
+                <div class="column right">
+                    <div>
+                        <input type="file" id="matches" name="matches" accept=".csv" />
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="row">
-            <div class="column left">
-                <div>
-                    <label for="fromEmail">Adres e-mail nadawcy:</label>
+            <div class="row">
+                <div class="centered">
+                    <button class="button-5">Generuj</button>
                 </div>
             </div>
-            <div class="column right">
-                <div>
-                    <input type="text" id="fromEmail" name="fromEmail"/>
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="column left">
-                <div>
-                    <label for="passwordEmail">Hasło:</label>
-                </div>
-            </div>
-            <div class="column right">
-                <div>
-                    <input type="password" id="passwordEmail" name="passwordEmail"/>
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="column left">
-                <div>
-                    <label for="participants">Uczestnicy:</label>
-                </div>
-            </div>
-            <div class="column right">
-                <div>
-                    <input type="file" id="participants" name="participants" accept=".csv" />
-                </div>
-            </div>
-        </div> 
-        <div class="row">
-            <div class="column left">
-                <div>
-                    <label for="matches">Odpowiedzi:</label>
-                </div>
-            </div>
-            <div class="column right">
-                <div>
-                    <input type="file" id="matches" name="matches" accept=".csv" />
-                </div>
-            </div>
-        </div>
+        </form>
         <div class="row">
             <div class="centered">
-                <button class="button-5">Generuj</button>
+                <a href="/readme.html" class="centered">Instrukcja obsługi</a>
             </div>
         </div>
-    </form>
-    <div class="row">
-        <div class="centered">
-            <a href="/readme.html" class="centered">Instrukcja obsługi</a>
-        </div>
-    </div>
-    
-</body>
-
+    </body>
 </html>

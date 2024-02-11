@@ -32,7 +32,7 @@ func ConvertCSVData(pData [][]string) (Participants, error) {
 		if len(data) != columnsNum {
 			return nil, fmt.Errorf("error while converting CSV data - malformed file (number of columns is %d instead of %d)", columnsNum, len(data))
 		}
-		if strings.EqualFold(data[0], idTag) {
+		if strings.EqualFold(data[0], idTag) || strings.Contains(strings.ToLower(data[0]), "u") {
 			continue
 		}
 		intID, err := strconv.Atoi(data[0])
