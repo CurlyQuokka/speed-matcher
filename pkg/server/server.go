@@ -31,6 +31,7 @@ const (
 	DefaultShutdownTimeout   = 5 * time.Second
 
 	sessionCookieName = "session"
+	key64             = 64
 )
 
 var (
@@ -61,7 +62,7 @@ type ToSend struct {
 }
 
 func New(maxUploadSize int64, sec *security.Security, certFile, keyFile string) (*Server, error) {
-	key, err := security.GenerateSecret(64)
+	key, err := security.GenerateSecret(key64)
 	if err != nil {
 		return nil, fmt.Errorf("error generating secret for cookie store")
 	}
@@ -105,6 +106,17 @@ func (s *Server) Serve(port string, errors chan<- error) {
 
 func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
+
+	session, err := s.checkSession(w, r)
+	if err != nil {
+		http.Error(w, "upload error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if !session.Authorized {
+		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+		return
+	}
 
 	status, err := s.checkUploadHandlerSecurity(w, r)
 	if err != nil {
@@ -223,13 +235,24 @@ func executeTemplate(w http.ResponseWriter, matchingResults *result.Result) erro
 }
 
 func (s *Server) MailHandler(w http.ResponseWriter, r *http.Request) {
+	session, err := s.checkSession(w, r)
+	if err != nil {
+		http.Error(w, "mailer error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if !session.Authorized {
+		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+		return
+	}
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	var ts ToSend
-	err := json.NewDecoder(r.Body).Decode(&ts)
+	err = json.NewDecoder(r.Body).Decode(&ts)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -271,27 +294,11 @@ func (s *Server) Shutdown() error {
 }
 
 func (s *Server) checkUploadHandlerSecurity(w http.ResponseWriter, r *http.Request) (int, error) {
-	if r.Method != http.MethodPost {
-		return http.StatusMethodNotAllowed, fmt.Errorf("method not allowed")
-	}
-
 	r.Body = http.MaxBytesReader(w, r.Body, s.maxUploadSize)
 	if err := r.ParseMultipartForm(s.maxUploadSize); err != nil {
 		return http.StatusBadRequest,
 			fmt.Errorf("the uploaded file is too big (>%d)", s.maxUploadSize)
 	}
-
-	// fromEmail := r.FormValue("fromEmail")
-
-	// isAuthorized, err := s.sec.IsEmailAuthorized(fromEmail)
-	// if err != nil {
-	// 	return http.StatusInternalServerError,
-	// 		fmt.Errorf("error checking email authorization: %w", err)
-	// }
-	// if !isAuthorized {
-	// 	return http.StatusBadRequest,
-	// 		fmt.Errorf("address %s is not authorized to use this service", fromEmail)
-	// }
 
 	return http.StatusOK, nil
 }
@@ -314,37 +321,18 @@ func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request, oauthConf 
 }
 
 func (s *Server) GoogleLoginHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := s.store.Get(r, sessionCookieName)
+	session, err := s.checkSession(w, r)
 	if err != nil {
-		http.Error(w, "failed to get session: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "login error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if session.IsNew {
-		id, err := s.sec.NewSession()
-		if err != nil {
-			http.Error(w, "failed to create new session: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		session.Values["id"] = id
-		if err := session.Save(r, w); err != nil {
-			http.Error(w, "failed to save session: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
-
-	internalSession, err := s.sec.GetSessionByObject(session)
-	if err != nil {
-		http.Error(w, "getting internal session: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if internalSession.Authorized {
+	if session.Authorized {
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		return
 	}
 
-	s.LoginHandler(w, r, oauthConfGl, internalSession.OAuthState)
+	s.LoginHandler(w, r, oauthConfGl, session.OAuthState)
 }
 
 var (
@@ -396,7 +384,7 @@ func (s *Server) CallBackFromGoogle(w http.ResponseWriter, r *http.Request) {
 
 		var tokenSource = oauthConfGl.TokenSource(context.Background(), token)
 
-		s.gmailSvc, err = gmail.NewService(context.Background(), option.WithTokenSource(tokenSource))
+		s.gmailSvc, err = gmail.NewService(ctx, option.WithTokenSource(tokenSource))
 		if err != nil {
 			http.Error(w, "failed to create gmail client "+err.Error(), http.StatusBadRequest)
 			return
@@ -404,10 +392,13 @@ func (s *Server) CallBackFromGoogle(w http.ResponseWriter, r *http.Request) {
 
 		internalSession.Authorized = true
 
-		session.Save(r, w)
-
-		if err != nil {
-			http.Error(w, "failed to read body: "+err.Error(), http.StatusInternalServerError)
+		if err = session.Save(r, w); err != nil {
+			if internalErr := s.sec.DeleteSessionByObject(session); internalErr != nil {
+				http.Error(w, "failed to delete internal session: "+err.Error(), http.StatusInternalServerError)
+			}
+			http.Error(w, "failed to save session: "+err.Error(), http.StatusInternalServerError)
+			session.Options.MaxAge = -1
+			_ = session.Save(r, w)
 			return
 		}
 
@@ -416,41 +407,13 @@ func (s *Server) CallBackFromGoogle(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) FormHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := s.store.Get(r, sessionCookieName)
+	session, err := s.checkSession(w, r)
 	if err != nil {
-		http.Error(w, "failed to get session: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "error creating session: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if session.IsNew {
-		id, err := s.sec.NewSession()
-		if err != nil {
-			http.Error(w, "failed to create new session: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		session.Values["id"] = id
-		if err := session.Save(r, w); err != nil {
-			http.Error(w, "failed to save session: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
-		return
-	}
-
-	id, ok := session.Values["id"].(string)
-
-	if !ok {
-		http.Error(w, "failed to get session ID", http.StatusBadRequest)
-		return
-	}
-
-	internalSession, err := s.sec.GetSession(id)
-	if err != nil {
-		http.Error(w, "failed to find session with ID", http.StatusBadRequest)
-		return
-	}
-
-	if !internalSession.Authorized {
+	if !session.Authorized {
 		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
 		return
 	}
@@ -476,50 +439,56 @@ func (s *Server) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 
 	session.Options.MaxAge = -1
 
-	s.store.Save(r, w, session)
+	if err = session.Save(r, w); err != nil {
+		http.Error(w, "failed to save session: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	w.Write([]byte("Logged out"))
+	if err = s.sec.DeleteSessionByObject(session); err != nil {
+		http.Error(w, "failed to delete internal session: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if _, err = w.Write([]byte("Logged out")); err != nil {
+		http.Error(w, "failed to write response: "+err.Error(), http.StatusInternalServerError)
+	}
 	return
 }
 
-func (s *Server) checkSession(w http.ResponseWriter, r *http.Request) {
+func (s *Server) checkSession(w http.ResponseWriter, r *http.Request) (*security.Session, error) {
 	session, err := s.store.Get(r, sessionCookieName)
 	if err != nil {
-		http.Error(w, "failed to get session: "+err.Error(), http.StatusInternalServerError)
-		return
+		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
 
+	var id string
+	var ok bool
 	if session.IsNew {
-		id, err := s.sec.NewSession()
+		id, err = s.sec.NewSession()
 		if err != nil {
-			http.Error(w, "failed to create new session: "+err.Error(), http.StatusInternalServerError)
-			return
+			return nil, fmt.Errorf("failed to create internal session: %w", err)
 		}
 		session.Values["id"] = id
+
 		if err := session.Save(r, w); err != nil {
-			http.Error(w, "failed to save session: "+err.Error(), http.StatusInternalServerError)
-			return
+			s.sec.DeleteSession(id)
+			return nil, fmt.Errorf("failed to save session: %w", err)
 		}
-		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
-		return
-	}
-
-	id, ok := session.Values["id"].(string)
-
-	if !ok {
-		http.Error(w, "failed to get session ID", http.StatusBadRequest)
-		return
+	} else {
+		id, ok = session.Values["id"].(string)
+		if !ok {
+			session.Options.MaxAge = -1
+			if err = session.Save(r, w); err != nil {
+				return nil, fmt.Errorf("failed to save session: %w", err)
+			}
+			return nil, fmt.Errorf("error getting ID from session cookie")
+		}
 	}
 
 	internalSession, err := s.sec.GetSession(id)
 	if err != nil {
-		http.Error(w, "failed to find session with ID", http.StatusBadRequest)
-		return
+		return nil, fmt.Errorf("error getting internal session: %w", err)
 	}
 
-	if !internalSession.Authorized {
-		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
-		return
-	}
-
+	return internalSession, nil
 }
