@@ -11,6 +11,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/gorilla/sessions"
 )
 
 const (
@@ -27,6 +29,12 @@ type Security struct {
 	cblock         cipher.Block
 	otps           map[string]time.Time
 	quit           chan bool
+	sessions       map[string]*Session
+}
+
+type Session struct {
+	Authorized bool
+	OAuthState string
 }
 
 func New(secret string, allowedDomains []string, quit chan bool) (*Security, error) {
@@ -35,6 +43,7 @@ func New(secret string, allowedDomains []string, quit chan bool) (*Security, err
 		secret:         secret,
 		otps:           make(map[string]time.Time),
 		quit:           quit,
+		sessions:       make(map[string]*Session),
 	}
 
 	cBlock, err := aes.NewCipher([]byte(s.secret))
@@ -46,6 +55,66 @@ func New(secret string, allowedDomains []string, quit chan bool) (*Security, err
 	go s.WatchOTPs()
 
 	return s, nil
+}
+
+func (s *Security) NewSession() (string, error) {
+	id, err := GenerateSecret(otpLength)
+	if err != nil {
+		return "", fmt.Errorf("error generating session ID")
+	}
+
+	state, err := GenerateSecret(otpLength)
+	if err != nil {
+		return "", fmt.Errorf("error generating OAuth state")
+	}
+
+	if _, exists := s.sessions[id]; exists {
+		return "", fmt.Errorf("session ID already exists")
+	}
+
+	s.sessions[id] = &Session{Authorized: false, OAuthState: state}
+
+	return id, nil
+}
+
+func (s *Security) GetSession(id string) (*Session, error) {
+	value, exists := s.sessions[id]
+	if !exists {
+		return nil, fmt.Errorf("session %s does not exist", id)
+	}
+
+	return value, nil
+}
+
+func (s *Security) GetSessionByObject(session *sessions.Session) (*Session, error) {
+	id, ok := session.Values["id"].(string)
+
+	if !ok {
+		return nil, fmt.Errorf("failed to get id value from cookie")
+	}
+
+	internalSession, err := s.GetSession(id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get internal session: %w", err)
+	}
+
+	return internalSession, nil
+}
+
+func (s *Security) DeleteSession(id string) {
+	delete(s.sessions, id)
+}
+
+func (s *Security) DeleteSessionByObject(session *sessions.Session) error {
+	id, ok := session.Values["id"].(string)
+
+	if !ok {
+		return fmt.Errorf("failed to get id value from cookie")
+	}
+
+	s.DeleteSession(id)
+
+	return nil
 }
 
 func (s *Security) Encrypt(value string) (string, error) {

@@ -19,8 +19,6 @@ function sendMail(id, errorCounter) {
     xhttp.open("POST", url, true);
     xhttp.setRequestHeader("Content-Type", "application/json");
 
-    toSend["from"] = document.getElementById("fromEmail").innerText
-    toSend["pass"] = document.getElementById("passwordEmail").innerText
     toSend["otp"] = document.getElementById("otp").innerText
 
     xhttp.onreadystatechange = function() {
