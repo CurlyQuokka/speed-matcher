@@ -30,7 +30,7 @@ func start() error {
 		return fmt.Errorf("cannot create security module: %w", err)
 	}
 
-	srv, err := server.New(cfg.MaxUploadSize, sec, cfg.CertFile, cfg.KeyFile)
+	srv, err := server.New(sec, cfg)
 	if err != nil {
 		return fmt.Errorf("cannot create server: %w", err)
 	}

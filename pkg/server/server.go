@@ -12,13 +12,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/CurlyQuokka/speed-matcher/pkg/config"
 	"github.com/CurlyQuokka/speed-matcher/pkg/csvreader"
 	"github.com/CurlyQuokka/speed-matcher/pkg/participant"
 	"github.com/CurlyQuokka/speed-matcher/pkg/result"
 	"github.com/CurlyQuokka/speed-matcher/pkg/security"
 	"github.com/gorilla/sessions"
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
 	"google.golang.org/api/gmail/v1"
 	"google.golang.org/api/option"
 )
@@ -34,24 +34,12 @@ const (
 	key64             = 64
 )
 
-var (
-	oauthConfGl = &oauth2.Config{
-		ClientID:     "",
-		ClientSecret: "",
-		RedirectURL:  "http://localhost:8080/callback-gl",
-		Scopes:       []string{"https://www.googleapis.com/auth/gmail.send"},
-		Endpoint:     google.Endpoint,
-	}
-)
-
 type Server struct {
-	maxUploadSize int64
-	sec           *security.Security
-	srv           *http.Server
-	certFile      string
-	keyFile       string
-	gmailSvc      *gmail.Service
-	store         *sessions.CookieStore
+	cfg      *config.Config
+	sec      *security.Security
+	srv      *http.Server
+	gmailSvc *gmail.Service
+	store    *sessions.CookieStore
 }
 
 type ToSend struct {
@@ -61,18 +49,20 @@ type ToSend struct {
 	Otp     string `json:"otp"`
 }
 
-func New(maxUploadSize int64, sec *security.Security, certFile, keyFile string) (*Server, error) {
-	key, err := security.GenerateSecret(key64)
-	if err != nil {
-		return nil, fmt.Errorf("error generating secret for cookie store")
+func New(sec *security.Security, cfg *config.Config) (*Server, error) {
+	var err error
+	if cfg.CookieStoreKey == "" {
+		cfg.CookieStoreKey, err = security.GenerateSecret(key64)
+		fmt.Println(cfg.CookieStoreKey)
+		if err != nil {
+			return nil, fmt.Errorf("error generating secret for cookie store")
+		}
 	}
 
 	return &Server{
-		maxUploadSize: maxUploadSize,
-		sec:           sec,
-		certFile:      certFile,
-		keyFile:       keyFile,
-		store:         sessions.NewCookieStore([]byte(key)),
+		cfg:   cfg,
+		sec:   sec,
+		store: sessions.NewCookieStore([]byte(cfg.CookieStoreKey)),
 	}, nil
 }
 
@@ -96,8 +86,8 @@ func (s *Server) Serve(port string, errors chan<- error) {
 	}
 
 	var err error
-	if s.certFile != "" {
-		err = s.srv.ListenAndServeTLS(s.certFile, s.keyFile)
+	if s.cfg.CertFile != "" {
+		err = s.srv.ListenAndServeTLS(s.cfg.CertFile, s.cfg.KeyFile)
 	} else {
 		err = s.srv.ListenAndServe()
 	}
@@ -130,13 +120,13 @@ func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	passwordEmail := strings.ReplaceAll(r.FormValue("passwordEmail"), " ", "")
+	// passwordEmail := strings.ReplaceAll(r.FormValue("passwordEmail"), " ", "")
 
-	pass, err := s.sec.Encrypt(passwordEmail)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	// pass, err := s.sec.Encrypt(passwordEmail)
+	// if err != nil {
+	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
 
 	reader := csvreader.CSVReader{}
 
@@ -163,11 +153,10 @@ func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	fromEmail := r.FormValue("fromEmail")
 
 	matchingResults := &result.Result{
-		FromEmail:     fromEmail,
-		PasswordEmail: pass,
-		EventName:     r.FormValue("eventName"),
-		Participants:  *participants,
-		OTP:           otp,
+		FromEmail:    fromEmail,
+		EventName:    r.FormValue("eventName"),
+		Participants: *participants,
+		OTP:          otp,
 	}
 
 	if err = executeTemplate(w, matchingResults); err != nil {
@@ -294,10 +283,10 @@ func (s *Server) Shutdown() error {
 }
 
 func (s *Server) checkUploadHandlerSecurity(w http.ResponseWriter, r *http.Request) (int, error) {
-	r.Body = http.MaxBytesReader(w, r.Body, s.maxUploadSize)
-	if err := r.ParseMultipartForm(s.maxUploadSize); err != nil {
+	r.Body = http.MaxBytesReader(w, r.Body, s.cfg.MaxUploadSize)
+	if err := r.ParseMultipartForm(s.cfg.MaxUploadSize); err != nil {
 		return http.StatusBadRequest,
-			fmt.Errorf("the uploaded file is too big (>%d)", s.maxUploadSize)
+			fmt.Errorf("the uploaded file is too big (>%d)", s.cfg.MaxUploadSize)
 	}
 
 	return http.StatusOK, nil
@@ -332,7 +321,7 @@ func (s *Server) GoogleLoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.LoginHandler(w, r, oauthConfGl, session.OAuthState)
+	s.LoginHandler(w, r, s.cfg.OAuth2Config, session.OAuthState)
 }
 
 var (
@@ -376,13 +365,13 @@ func (s *Server) CallBackFromGoogle(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "No code returned from Google: "+errorValue, http.StatusBadRequest)
 		return
 	} else {
-		token, err := oauthConfGl.Exchange(ctx, code)
+		token, err := s.cfg.OAuth2Config.Exchange(ctx, code)
 		if err != nil {
 			http.Error(w, "OAuth exchange failed with "+err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		var tokenSource = oauthConfGl.TokenSource(context.Background(), token)
+		var tokenSource = s.cfg.OAuth2Config.TokenSource(context.Background(), token)
 
 		s.gmailSvc, err = gmail.NewService(ctx, option.WithTokenSource(tokenSource))
 		if err != nil {
@@ -409,7 +398,11 @@ func (s *Server) CallBackFromGoogle(w http.ResponseWriter, r *http.Request) {
 func (s *Server) FormHandler(w http.ResponseWriter, r *http.Request) {
 	session, err := s.checkSession(w, r)
 	if err != nil {
-		http.Error(w, "error creating session: "+err.Error(), http.StatusInternalServerError)
+		if strings.Contains(err.Error(), "error getting internal session") {
+			http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+		} else {
+			http.Error(w, "error creating session: "+err.Error(), http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -487,6 +480,10 @@ func (s *Server) checkSession(w http.ResponseWriter, r *http.Request) (*security
 
 	internalSession, err := s.sec.GetSession(id)
 	if err != nil {
+		session.Options.MaxAge = -1
+		if err = session.Save(r, w); err != nil {
+			return nil, fmt.Errorf("failed to save session: %w", err)
+		}
 		return nil, fmt.Errorf("error getting internal session: %w", err)
 	}
 
