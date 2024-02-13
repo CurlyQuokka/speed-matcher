@@ -88,27 +88,38 @@ func FromEnv() (*Config, error) {
 	cfg.CertFile = os.Getenv(certFileEnv)
 	cfg.KeyFile = os.Getenv(keyFileEnv)
 
-	cfg.OAuth2Config = &oauth2.Config{}
+	cfg.CookieStoreKey = os.Getenv(cookieStoreKeyEnv)
 
-	cfg.OAuth2Config.ClientID = os.Getenv(oauth2ClientIDEnv)
-	if cfg.OAuth2Config.ClientID == "" {
+	oauth2config, err := oauthConfigFromEnv()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create OAuth2 config: %w", err)
+	}
+
+	cfg.OAuth2Config = oauth2config
+
+	return cfg, nil
+}
+
+func oauthConfigFromEnv() (*oauth2.Config, error) {
+	cfg := &oauth2.Config{}
+
+	cfg.ClientID = os.Getenv(oauth2ClientIDEnv)
+	if cfg.ClientID == "" {
 		return nil, fmt.Errorf("client ID not defined")
 	}
 
-	cfg.OAuth2Config.ClientSecret = os.Getenv(oauth2ClientSecretEnv)
-	if cfg.OAuth2Config.ClientSecret == "" {
+	cfg.ClientSecret = os.Getenv(oauth2ClientSecretEnv)
+	if cfg.ClientSecret == "" {
 		return nil, fmt.Errorf("client secret not defined")
 	}
 
-	cfg.OAuth2Config.RedirectURL = os.Getenv(oauth2RedirectURLEnv)
-	if cfg.OAuth2Config.RedirectURL == "" {
+	cfg.RedirectURL = os.Getenv(oauth2RedirectURLEnv)
+	if cfg.RedirectURL == "" {
 		return nil, fmt.Errorf("redirect URL not defined")
 	}
 
-	cfg.CookieStoreKey = os.Getenv(cookieStoreKeyEnv)
-
-	cfg.OAuth2Config.Scopes = []string{"https://www.googleapis.com/auth/gmail.send"}
-	cfg.OAuth2Config.Endpoint = google.Endpoint
+	cfg.Scopes = []string{"https://www.googleapis.com/auth/gmail.send"}
+	cfg.Endpoint = google.Endpoint
 
 	return cfg, nil
 }

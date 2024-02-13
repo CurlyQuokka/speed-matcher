@@ -53,7 +53,6 @@ func New(sec *security.Security, cfg *config.Config) (*Server, error) {
 	var err error
 	if cfg.CookieStoreKey == "" {
 		cfg.CookieStoreKey, err = security.GenerateSecret(key64)
-		fmt.Println(cfg.CookieStoreKey)
 		if err != nil {
 			return nil, fmt.Errorf("error generating secret for cookie store")
 		}
@@ -119,14 +118,6 @@ func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to generate OTP: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	// passwordEmail := strings.ReplaceAll(r.FormValue("passwordEmail"), " ", "")
-
-	// pass, err := s.sec.Encrypt(passwordEmail)
-	// if err != nil {
-	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
 
 	reader := csvreader.CSVReader{}
 
@@ -292,8 +283,8 @@ func (s *Server) checkUploadHandlerSecurity(w http.ResponseWriter, r *http.Reque
 	return http.StatusOK, nil
 }
 
-func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request, oauthConf *oauth2.Config, oauthStateString string) {
-	URL, err := url.Parse(oauthConf.Endpoint.AuthURL)
+func (*Server) LoginHandler(w http.ResponseWriter, r *http.Request, oauthConf *oauth2.Config, oauthStateString string) {
+	authURL, err := url.Parse(oauthConf.Endpoint.AuthURL)
 	if err != nil {
 		http.Error(w, "failed to parse: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -304,9 +295,9 @@ func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request, oauthConf 
 	parameters.Add("redirect_uri", oauthConf.RedirectURL)
 	parameters.Add("response_type", "code")
 	parameters.Add("state", oauthStateString)
-	URL.RawQuery = parameters.Encode()
-	url := URL.String()
-	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+	authURL.RawQuery = parameters.Encode()
+	authURLString := authURL.String()
+	http.Redirect(w, r, authURLString, http.StatusTemporaryRedirect)
 }
 
 func (s *Server) GoogleLoginHandler(w http.ResponseWriter, r *http.Request) {
@@ -323,10 +314,6 @@ func (s *Server) GoogleLoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	s.LoginHandler(w, r, s.cfg.OAuth2Config, session.OAuthState)
 }
-
-var (
-	ctx = context.Background()
-)
 
 func (s *Server) CallBackFromGoogle(w http.ResponseWriter, r *http.Request) {
 	session, err := s.store.Get(r, sessionCookieName)
@@ -352,47 +339,55 @@ func (s *Server) CallBackFromGoogle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ctx := r.Context()
+
+	token, err := s.getToken(ctx, r)
+	if err != nil {
+		http.Error(w, "could not get token: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var tokenSource = s.cfg.OAuth2Config.TokenSource(ctx, token)
+
+	s.gmailSvc, err = gmail.NewService(ctx, option.WithTokenSource(tokenSource))
+	if err != nil {
+		http.Error(w, "failed to create gmail client "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	internalSession.Authorized = true
+
+	if err = session.Save(r, w); err != nil {
+		if internalErr := s.sec.DeleteSessionByObject(session); internalErr != nil {
+			http.Error(w, "failed to delete internal session: "+err.Error(), http.StatusInternalServerError)
+		}
+		http.Error(w, "failed to save session: "+err.Error(), http.StatusInternalServerError)
+		session.Options.MaxAge = -1
+		_ = session.Save(r, w)
+		return
+	}
+
+	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+}
+
+func (s *Server) getToken(ctx context.Context, r *http.Request) (*oauth2.Token, error) {
 	code := r.FormValue("code")
 
 	if code == "" {
 		reason := r.FormValue("error_reason")
-		fmt.Println(reason)
 		errorValue := r.FormValue("error")
 		if reason == "user_denied" || errorValue == "access_denied" {
-			http.Error(w, "No code returned from Google: user has denied permission", http.StatusBadRequest)
-			return
+			return nil, fmt.Errorf("no code from Google: user dennied permission")
 		}
-		http.Error(w, "No code returned from Google: "+errorValue, http.StatusBadRequest)
-		return
-	} else {
-		token, err := s.cfg.OAuth2Config.Exchange(ctx, code)
-		if err != nil {
-			http.Error(w, "OAuth exchange failed with "+err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		var tokenSource = s.cfg.OAuth2Config.TokenSource(context.Background(), token)
-
-		s.gmailSvc, err = gmail.NewService(ctx, option.WithTokenSource(tokenSource))
-		if err != nil {
-			http.Error(w, "failed to create gmail client "+err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		internalSession.Authorized = true
-
-		if err = session.Save(r, w); err != nil {
-			if internalErr := s.sec.DeleteSessionByObject(session); internalErr != nil {
-				http.Error(w, "failed to delete internal session: "+err.Error(), http.StatusInternalServerError)
-			}
-			http.Error(w, "failed to save session: "+err.Error(), http.StatusInternalServerError)
-			session.Options.MaxAge = -1
-			_ = session.Save(r, w)
-			return
-		}
-
-		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+		return nil, fmt.Errorf("no code returned from Google: %s", errorValue)
 	}
+
+	token, err := s.cfg.OAuth2Config.Exchange(ctx, code)
+	if err != nil {
+		return nil, fmt.Errorf("OAuth exchange failed: %w", err)
+	}
+
+	return token, nil
 }
 
 func (s *Server) FormHandler(w http.ResponseWriter, r *http.Request) {
@@ -445,7 +440,6 @@ func (s *Server) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	if _, err = w.Write([]byte("Logged out")); err != nil {
 		http.Error(w, "failed to write response: "+err.Error(), http.StatusInternalServerError)
 	}
-	return
 }
 
 func (s *Server) checkSession(w http.ResponseWriter, r *http.Request) (*security.Session, error) {
