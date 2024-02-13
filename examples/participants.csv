@@ -1,5 +1,5 @@
 ID,Email,Zgoda,Imię,Nazwisko,Zaimki,Miejsce zamieszkania,Data urodzenia
-1,pstrusiewiczsurmacki@gmail.com,Wyrażam zgodę,Jan,Kowalski,on/jego,Szczecin,01.01.1980
-2,adam.nowak@gmail.com,Wyrażam zgodę,Adam,Nowak,ona/jej,Gryfino,02.01.1980
-3,esme.keller@gmail.com,Wyrażam zgodę,Esme,Keller,ono/jego,Police,03.01.1980
-4,arman.stanley@gmail.com,Wyrażam zgodę,Arman,Stanley,onu/jenu,Stargard,04.01.1980
+1,jan.kowalski@emaildomain.com,Wyrażam zgodę,Jan,Kowalski,ona/jej,Szczecin,01.01.1980
+2,adam.nowak@emaildomain.com,Wyrażam zgodę,Adam,Nowak,on jego,Gryfino,02.01.1980
+3,esme.keller@emaildomain.com,Wyrażam zgodę,Esme,Keller,ono/jego,Police,03.01.1980
+4,arman.stanley@emaildomain.com,Wyrażam zgodę,Arman,Stanley,onu/jenu,Stargard,04.01.1980
