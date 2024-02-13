@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Speed-event matcher</title>
+    <link rel="stylesheet" href="styles.css">
+    <!---https://www.svgrepo.com/svg/406604/men-holding-hands-medium-light-skin-tone-medium-dark-skin-tone-->
+    <link rel="icon" type="image/x-icon" href="favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet"> 
+</head>
+
+<body>
+    <div class="readme">
+        <div class="just">
+            <h1>Instrukcja obsługi</h1>
+            <ol>
+                <li class="outer">
+                    Tworzymy dokument z listą uczestników w dowolny arkuszu kalkulacyjnym (np. Google Sheets, Excel, LibreOffice/OpenOffice Calc) z następującymi kolumnami, <b><u>koniecznie w tej kolejności</u></b>:
+                    <ol>
+                        <li>
+                            Numer uczestnika w zabawie
+                        </li>
+                        <li>
+                            Adres e-mail
+                        </li>
+                        <li>
+                            Wyrażenie zgody na uczestnictwo
+                        </li>
+                        <li>
+                            Preferowane imię
+                        </li>
+                        <li>
+                            Nazwisko
+                        </li>
+                        <li>
+                            Używane zaimki
+                        </li>
+                        <li>
+                            Miejsce zamieszkania
+                        </li>
+                        <li>
+                            Data urodzenia
+                        </li>
+                    </ol>
+                    <i>Numery uczestników nie muszą być w kolejności "alfabetycznej".</i><br />
+                    <img src="images/01.jpg" />
+                </li>
+                <li class="outer">
+                    Zapisujemy plik w formacie CSV (Comma-separated values). Np. w Google należy wybrać z menu Plik > Pobierz > Wartości oddzielone przecinkami (.csv) <br />
+                    <img src="images/02.jpg" />
+                </li>
+                <li class="outer">
+                    Tworzymy drugi plik w którym przepisujemy odpowiedzi uczestników z karteczek. W pierwszej <b>kolumnie</b> wpisujemy numer uczestnika w <b>następnych kolumnach <u>tylko</u> numery osób z którymi ta osoba <u>chce</u> nawiązać kontakt</b>
+                    <br /><br />Przykładowo:<br /><br />
+                    <ul>
+                        <li>
+                            Osoba z numerem <b>1</b> chce nawiązać kontakt z osobami <b>2</b> i <b>3</b>
+                        </li>
+                        <li>
+                            Osoba z numerem <b>2</b> chce nawiązać kontakt z osobami <b>1</b> i <b>4</b>
+                        </li>
+                        <li>
+                            Osoba z numerem <b>3</b> chce nawiązać kontakt z osobami <b>1</b>, <b>2</b> i <b>4</b>
+                        </li>
+                        <li>
+                            Osoba z numerem <b>4</b> nie chce nawiązywac <b>żadnego</b> kontaktu. :(
+                        </li>
+                    </ul>
+                    <br /><br />Plik powinien wyglądać więc nastepująco:<br />
+                    <img src="images/03.jpg" />
+                    <br /><br /><i>W tym pliku nie powinno być nic poza numerami.</i><br /><br />
+                </li>
+                <li class="outer">
+                    Drugi plik również zapisujemy jako CSV tak samo jak pierwszy.
+                </li>
+                <li class="outer">
+                    Otwieramy <a href="/" target="_blank" rel="noopener noreferrer">narzędzie do matchowania</a> i logujemy się kontem Google potwierdzając przyznanie uprawnień do wysyłania maili.
+                </li>
+                <li class="outer">Pojawia się formularz - podajemy potrzebne informacje
+                    <ul>
+                        <li>Nazwa eventu (np. SpeedFriending - 19.02.2024)</li>
+                        <li>Uczestnicy - wybieramy plik z uczesnikami, stworzony w pkt. 1</li>
+                        <li>Odpowiedzi - wybieramy plik z odpowiedziami przepisanymi z kartek, stworzony w pkt. 3</li>
+                    </ul>
+                </li>
+                <br />
+                <img src="images/04.jpg" />
+                <li class="outer">Klikamy przycisk 'Generuj'</li>
+                <li class="outer">Otwiera się strona z wynikami i wygenerowanymi wiadmościami do użytkowników. Można:<br /><br />
+                    <ul>
+                        <li>Klikać przy każdym mailu na 'wyślij', lub</li>
+                        <img src="images/05.jpg" />
+                        <li>Zejść na sam dół strony i kliknąć 'wyślij wszystkie'</li>
+                        <img src="images/06.jpg" />
+                    </ul>
+                </li>
+                <li class="outer">W przypadku jakiegokolwiek błędu pojawią się <span style="color:red">czerwone</span> napisy koło przycisków do wysyłania lub na dole strony.</li>
+                <li class="outer">
+                    Jeżeli wszsytko pójdzie dobrze, to koło przycisków 'Wyślij' pojawi się <span style="color:green">zielony</span> napis `wysłano`, a sam przycisk stanie się nieaktywny. <br />
+                    <img src="images/07.jpg" />
+                </li>
+                <li class="outer">Klikamy wyloguj, nastpęnie można wejść na Gmaila i sprawdzić czy wszsytkie maile które powinny zostać wysłane są w zakładce 'Wysłane'.</li>
+            </ol> 
+        </div>
+    </div>
+</body>
+</html>
