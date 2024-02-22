@@ -34,7 +34,10 @@
                         {{ $tmp := index $participants .}}
                         {{$match := Deref $tmp}}
                         <tr>
-                            <td><b>{{$match.Name}} {{$match.Surname}}</b></td><td><a href="mailto:{{$match.Email}}">{{$match.Email}}</a></td><td>({{$match.Pronouns}})</td>
+                            <td><b>{{$match.Name}} {{$match.Surname}}</b></td><td><a href="mailto:{{$match.Email}}">{{$match.Email}}</a></td>
+                            {{ if $match.Pronouns != ""}}
+                                <td>({{$match.Pronouns}})</td>
+                            {{ end }}
                         </tr>
                         {{end}}
                         </table>
@@ -42,7 +45,7 @@
                         <b>Niestety tym razem nie udało nam się znaleźć dla Ciebie par.</b> Mamy nadzieję, że jeszcze nas odwiedzisz i następne spotkanie będzie bardziej owocne. :)<br />
                     {{end}}
                     <br />
-                    Z ogromną dawką miłości,<br />
+                    Pozdrawiamy,<br />
                     Lambda Szczecin<br /><br />
                 </div>
             <button id="{{$participant.Email}}-button" class="button-5" onclick="sendMail({{$participant.Email}})">Wyślij</button><span id="{{$participant.Email}}-status"></span>
