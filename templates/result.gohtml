@@ -34,7 +34,7 @@
                         {{ $tmp := index $participants .}}
                         {{$match := Deref $tmp}}
                         <tr>
-                            <td><b>{{$match.Name}} {{$match.Surname}}</b></td><td><a href="mailto:{{$match.Email}}">{{$match.Email}}</a></td>
+                            <td><b>{{$match.Name}}</b></td><td><a href="mailto:{{$match.Email}}">{{$match.Email}}</a></td>
                             {{ if $match.Pronouns }}
                                 <td>({{$match.Pronouns}})</td>
                             {{ end }}
