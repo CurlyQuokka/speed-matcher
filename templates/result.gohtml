@@ -18,7 +18,8 @@
     <span style="display: none" id="otp">{{.OTP}}</span>
     {{range .Participants}}
         {{ $participant := Deref .}}
-            <div id="{{$participant.Email}}" class="result">
+            <div id="{{$participant.ID}}" class="result">
+                Numer uczestnika: <span class="id">{{participant.ID}}</span>
                 Tytuł: <span class="subject">{{$eventName}} - Twoje pary</span>
                 <br />
                 Do: <span class="to">{{$participant.Email}}</span>
@@ -34,10 +35,11 @@
                         {{ $tmp := index $participants .}}
                         {{$match := Deref $tmp}}
                         <tr>
-                            <td><b>{{$match.Name}} {{$match.Surname}}</b></td><td><a href="mailto:{{$match.Email}}">{{$match.Email}}</a></td>
+                            <td><b>{{$match.Name}}</b></td>
                             {{ if $match.Pronouns }}
                                 <td>({{$match.Pronouns}})</td>
                             {{ end }}
+                            <td>{{$match.Contact}}</td>
                         </tr>
                         {{end}}
                         </table>
@@ -48,7 +50,7 @@
                     Pozdrawiamy,<br />
                     Lambda Szczecin<br /><br />
                 </div>
-            <button id="{{$participant.Email}}-button" class="button-5" onclick="sendMail({{$participant.Email}})">Wyślij</button><span id="{{$participant.Email}}-status"></span>
+            <button id="{{$participant.ID}}-button" class="button-5" onclick="sendMail({{$participant.ID}})">Wyślij</button><span id="{{$participant.ID}}-status"></span>
         </div>
     {{end}}
     <button id="sendAll-button" class="button-5" onclick="sendAll()">Wyślij wszystkie</button><br /><br /><span style="color: red" id="general-status"></span>

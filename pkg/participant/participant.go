@@ -21,6 +21,7 @@ type Participant struct {
 	Pronouns string
 	City     string
 	Birth    string
+	Contact  string
 	Matches  []uint16
 }
 
@@ -57,6 +58,7 @@ func ConvertCSVData(pData [][]string) (Participants, error) {
 			Pronouns: data[5],
 			City:     data[6],
 			Birth:    data[7],
+			Contact:  data[8],
 		}
 	}
 	return p, nil

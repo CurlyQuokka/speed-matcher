@@ -51,7 +51,7 @@ function sendAll() {
     };
 
     for (result of results) {
-        id =  result.getElementsByClassName("to")[0].innerText
+        id = result.getElementsByClassName("id")[0].innerText
         sendMail(id, errorCounter)
     }
 

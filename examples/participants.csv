@@ -1,5 +1,5 @@
-ID,Email,Zgoda,Imię,Nazwisko,Zaimki,Miejsce zamieszkania,Data urodzenia
-1,jan.kowalski@emaildomain.com,Wyrażam zgodę,Jan,Kowalski,ona/jej,Szczecin,01.01.1980
-2,adam.nowak@emaildomain.com,Wyrażam zgodę,Adam,Nowak,on jego,Gryfino,02.01.1980
-3,esme.keller@emaildomain.com,Wyrażam zgodę,Esme,Keller,ono/jego,Police,03.01.1980
-4,arman.stanley@emaildomain.com,Wyrażam zgodę,Arman,Stanley,onu/jenu,Stargard,04.01.1980
+ID,Email,Zgoda,Imię,Nazwisko,Zaimki,Miejsce zamieszkania,Data urodzenia,Kontakt,
+1,jan.kowalski@emaildomain.com,Wyrażam zgodę,Jan,Kowalski,,Szczecin,01.01.1980,CONTACT 1
+2,adam.nowak@emaildomain.com,Wyrażam zgodę,Adam,Nowak,on jego,Gryfino,02.01.1980,CONTACT 2
+3,esme.keller@emaildomain.com,Wyrażam zgodę,Esme,Keller,ono/jego,Police,03.01.1980,200200200CONTACT 3 AB
+4,arman.stanley@emaildomain.com,Wyrażam zgodę,Arman,Stanley,onu/jenu,Stargard,04.01.1980,100 100 100 CONTACT 1
