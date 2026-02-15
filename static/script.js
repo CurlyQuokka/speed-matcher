@@ -23,13 +23,13 @@ function sendMail(id, errorCounter) {
 
     xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
-            document.getElementById(toSend.to + "-button").disabled = true;
-            statusTextField = document.getElementById(toSend.to + "-status");
+            document.getElementById(id + "-button").disabled = true;
+            statusTextField = document.getElementById(id+ "-status");
             statusTextField.innerText = " - wysłano";
             statusTextField.style.color = "green";
         }
         if (this.readyState == 4 && this.status != 200) {
-            statusTextField = document.getElementById(toSend.to + "-status");
+            statusTextField = document.getElementById(id + "-status");
             statusTextField.innerText = " - WYSTĄPIŁ BŁĄD - " + this.status + " - " + this.statusText + " - " + this.responseText;
             statusTextField.style.color = "red";
             document.getElementById("general-status").innerText += "WYSTĄPIŁ BŁĄD - " + this.status + " - " + this.statusText + " - " + this.responseText + "\n";

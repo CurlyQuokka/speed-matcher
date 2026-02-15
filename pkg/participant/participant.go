@@ -9,7 +9,7 @@ import (
 
 const (
 	idTag      = "id"
-	columnsNum = 8
+	columnsNum = 9
 )
 
 type Participant struct {

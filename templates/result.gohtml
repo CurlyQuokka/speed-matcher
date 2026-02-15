@@ -19,7 +19,8 @@
     {{range .Participants}}
         {{ $participant := Deref .}}
             <div id="{{$participant.ID}}" class="result">
-                Numer uczestnika: <span class="id">{{participant.ID}}</span>
+                Numer uczestnika: <span class="id">{{$participant.ID}}</span>
+                <br />
                 Tytuł: <span class="subject">{{$eventName}} - Twoje pary</span>
                 <br />
                 Do: <span class="to">{{$participant.Email}}</span>
